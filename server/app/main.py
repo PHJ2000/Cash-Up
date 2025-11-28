@@ -40,8 +40,10 @@ COUPON_STATUS_ISSUED = "ISSUED"
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "admin123")
+ADMIN_IDS = [admin.strip() for admin in os.getenv("ADMIN_IDS", "admin").split(",") if admin.strip()]
 DEFAULT_FESTIVAL_ID = os.getenv("FESTIVAL_ID")
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30
 
 KST = ZoneInfo("Asia/Seoul")
 PENDING_ACTIVATION_MINUTES = 30
@@ -177,10 +179,38 @@ def verify_token(token: Optional[str]) -> Optional[str]:
         expected = hmac.new(SECRET_KEY.encode(), payload, "sha256").hexdigest()
         if not hmac.compare_digest(expected, signature):
             return None
-        # 30일 만료
-        if int(time.time()) - int(issued_at) > 60 * 60 * 24 * 30:
+        if int(time.time()) - int(issued_at) > TOKEN_TTL_SECONDS:
             return None
         return user_id
+    except Exception:
+        return None
+
+
+def create_admin_token(admin_id: str) -> str:
+    issued_at = str(int(time.time()))
+    payload = f"admin:{admin_id}:{issued_at}".encode()
+    signature = hmac.new(SECRET_KEY.encode(), payload, "sha256").hexdigest()
+    token = base64.urlsafe_b64encode(payload + b":" + signature.encode()).decode()
+    return token
+
+
+def verify_admin_token(token: Optional[str]) -> Optional[str]:
+    if not token:
+        return None
+    try:
+        raw = base64.urlsafe_b64decode(token.encode()).decode()
+        role, admin_id, issued_at, signature = raw.split(":")
+        if role != "admin":
+            return None
+        payload = f"{role}:{admin_id}:{issued_at}".encode()
+        expected = hmac.new(SECRET_KEY.encode(), payload, "sha256").hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            return None
+        if int(time.time()) - int(issued_at) > TOKEN_TTL_SECONDS:
+            return None
+        if ADMIN_IDS and admin_id not in ADMIN_IDS:
+            return None
+        return admin_id
     except Exception:
         return None
 
@@ -195,9 +225,33 @@ def get_current_user_id(authorization: Optional[str] = Header(None)) -> str:
     return user_id
 
 
+def get_current_admin_id(
+    authorization: Optional[str] = Header(None), x_admin_token: Optional[str] = Header(None)
+) -> str:
+    bearer_token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        bearer_token = authorization.split(" ", 1)[1]
+        admin_id = verify_admin_token(bearer_token)
+        if admin_id:
+            return admin_id
+        if bearer_token == ADMIN_TOKEN:
+            return "legacy-admin"
+    if x_admin_token:
+        admin_id = verify_admin_token(x_admin_token)
+        if admin_id:
+            return admin_id
+        if x_admin_token == ADMIN_TOKEN:
+            return "legacy-admin"
+    http_error(401, "관리자 인증이 필요합니다.")
+
+
 def require_admin(token: Optional[str]):
-    if token != ADMIN_TOKEN:
-        http_error(401, "관리자 인증이 필요합니다.")
+    admin_id = verify_admin_token(token)
+    if admin_id:
+        return admin_id
+    if token == ADMIN_TOKEN:
+        return "legacy-admin"
+    http_error(401, "관리자 인증이 필요합니다.")
 
 
 def http_error(status: int, message: str):
@@ -676,8 +730,22 @@ def list_coupons(
     return {"coupons": [serialize_coupon(c) for c in coupons]}
 
 
+@app.post("/api/admin/mock-login")
+def admin_mock_login(payload: dict):
+    admin_id = str(payload.get("adminId") or "").strip()
+    if not admin_id:
+        http_error(400, "관리자 ID를 입력해 주세요.")
+    if ADMIN_IDS and admin_id not in ADMIN_IDS:
+        http_error(401, "관리자 권한이 없습니다.")
+    token = create_admin_token(admin_id)
+    return {"adminId": admin_id, "token": token}
+
+
 @app.post("/api/admin/login")
 def admin_login(payload: dict):
+    admin_id = payload.get("adminId")
+    if admin_id:
+        return admin_mock_login(payload)
     password = payload.get("password")
     if password != ADMIN_PASSWORD:
         http_error(401, "비밀번호가 올바르지 않습니다.")
@@ -686,9 +754,8 @@ def admin_login(payload: dict):
 
 @app.post("/api/admin/festivals")
 def create_festival(
-    payload: dict, x_admin_token: Optional[str] = Header(None), db: Session = Depends(get_db_dep)
+    payload: dict, current_admin_id: str = Depends(get_current_admin_id), db: Session = Depends(get_db_dep)
 ):
-    require_admin(x_admin_token or payload.get("token"))
     name = payload.get("name")
     budget = payload.get("budget")
     per_user_daily_cap = payload.get("perUserDailyCap")
@@ -717,10 +784,9 @@ def create_festival(
 def generate_bins(
     festival_id: str,
     payload: dict,
-    x_admin_token: Optional[str] = Header(None),
+    current_admin_id: str = Depends(get_current_admin_id),
     db: Session = Depends(get_db_dep),
 ):
-    require_admin(x_admin_token or payload.get("token"))
     count = payload.get("count")
     parsed_count = int(count) if count is not None else None
     if not parsed_count or parsed_count <= 0:
@@ -751,9 +817,8 @@ def generate_bins(
 
 @app.get("/api/admin/festivals/{festival_id}/summary")
 def admin_summary(
-    festival_id: str, x_admin_token: Optional[str] = Header(None), db: Session = Depends(get_db_dep)
+    festival_id: str, current_admin_id: str = Depends(get_current_admin_id), db: Session = Depends(get_db_dep)
 ):
-    require_admin(x_admin_token)
     festival = db.get(Festival, festival_id)
     if not festival:
         http_error(404, "축제를 찾을 수 없습니다.")

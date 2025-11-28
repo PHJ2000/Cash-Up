@@ -4,7 +4,7 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Layout } from '../components/Layout';
 import { useAppState } from '../state/AppStateContext';
-import { Festival } from '../types';
+import { AdminSession, Festival } from '../types';
 
 type AdminSummary = {
   festival: Festival;
@@ -16,10 +16,24 @@ type AdminSummary = {
   binUsage: { binId: string; code?: string; count: number }[];
 };
 
+const loadAdminSession = (): AdminSession | null => {
+  const raw = localStorage.getItem('cashup_admin_session');
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as AdminSession;
+      if (parsed?.adminId && parsed?.token) return parsed;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  const legacyToken = localStorage.getItem('cashup_admin_token');
+  return legacyToken ? { adminId: 'legacy-admin', token: legacyToken } : null;
+};
+
 export const AdminPage = () => {
   const { festival } = useAppState();
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('cashup_admin_token'));
-  const [password, setPassword] = useState('');
+  const [adminSession, setAdminSession] = useState<AdminSession | null>(() => loadAdminSession());
+  const [adminId, setAdminId] = useState(adminSession?.adminId ?? '');
   const [newFestival, setNewFestival] = useState({
     name: '',
     budget: 5000000,
@@ -35,17 +49,22 @@ export const AdminPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (token && festival) {
-      loadSummary(festival.id, token);
+    if (adminSession?.token && festival) {
+      loadSummary(festival.id, adminSession.token);
     }
-  }, [festival?.id, token]);
+  }, [festival?.id, adminSession?.token]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
+    if (!adminId.trim()) {
+      setError('관리자 ID를 입력해 주세요.');
+      return;
+    }
     try {
-      const res = await api.adminLogin(password);
-      setToken(res.token);
-      localStorage.setItem('cashup_admin_token', res.token);
+      const session = await api.adminLogin(adminId.trim());
+      setAdminSession(session);
+      localStorage.setItem('cashup_admin_session', JSON.stringify(session));
+      localStorage.removeItem('cashup_admin_token');
       setMessage('관리자 로그인 완료');
       setError(null);
     } catch (err) {
@@ -53,11 +72,23 @@ export const AdminPage = () => {
     }
   };
 
+  const handleLogout = () => {
+    setAdminSession(null);
+    setSummary(null);
+    localStorage.removeItem('cashup_admin_session');
+    localStorage.removeItem('cashup_admin_token');
+    setMessage('관리자에서 로그아웃했어요.');
+    setError(null);
+  };
+
   const handleCreateFestival = async (e: FormEvent) => {
     e.preventDefault();
-    if (!token) return;
+    if (!adminSession) {
+      setError('관리자 로그인이 필요합니다.');
+      return;
+    }
     try {
-      const res = await api.adminCreateFestival(newFestival, token);
+      const res = await api.adminCreateFestival(newFestival, adminSession.token);
       setMessage(`축제 생성: ${res.festival.name} (${res.festival.id})`);
       setError(null);
     } catch (err) {
@@ -67,9 +98,12 @@ export const AdminPage = () => {
 
   const handleGenerateBins = async (e: FormEvent) => {
     e.preventDefault();
-    if (!token || !festival) return;
+    if (!adminSession || !festival) {
+      setError('관리자 로그인이 필요합니다.');
+      return;
+    }
     try {
-      const res = await api.adminGenerateBins(festival.id, binCount, token);
+      const res = await api.adminGenerateBins(festival.id, binCount, adminSession.token);
       setMessage(`${res.bins.length}개의 수거함 코드 생성 완료`);
       setError(null);
     } catch (err) {
@@ -93,17 +127,33 @@ export const AdminPage = () => {
           <p className="text-sm font-semibold text-beach-navy">관리자 로그인</p>
           <form onSubmit={handleLogin} className="flex gap-2">
             <input
-              type="password"
+              type="text"
               className="flex-1 rounded-xl border border-beach-sky bg-white/80 px-3 py-2 text-beach-navy focus:border-beach-sea focus:outline-none"
-              placeholder="admin123"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder="admin"
+              value={adminId}
+              onChange={(e) => setAdminId(e.target.value)}
             />
             <Button type="submit" className="w-auto px-3 py-2 text-sm">
               로그인
             </Button>
           </form>
-          {token && <p className="text-xs text-beach-navy/60">토큰 저장됨</p>}
+          <div className="flex items-center justify-between text-xs text-beach-navy/70">
+            {adminSession ? (
+              <>
+                <span>로그인: {adminSession.adminId}</span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-auto px-3 py-1 text-xs"
+                  onClick={handleLogout}
+                >
+                  로그아웃
+                </Button>
+              </>
+            ) : (
+              <span>더미 관리자 ID로 로그인하세요.</span>
+            )}
+          </div>
         </Card>
 
         <Card className="space-y-3">
@@ -159,7 +209,7 @@ export const AdminPage = () => {
                 onChange={(e) => setNewFestival({ ...newFestival, centerLng: Number(e.target.value) })}
               />
             </div>
-            <Button type="submit" disabled={!token}>
+            <Button type="submit" disabled={!adminSession}>
               축제 등록
             </Button>
           </form>
@@ -174,7 +224,7 @@ export const AdminPage = () => {
               value={binCount}
               onChange={(e) => setBinCount(Number(e.target.value))}
             />
-            <Button type="submit" className="w-auto px-3 py-2 text-sm" disabled={!token || !festival}>
+            <Button type="submit" className="w-auto px-3 py-2 text-sm" disabled={!adminSession || !festival}>
               생성
             </Button>
           </form>
@@ -204,11 +254,11 @@ export const AdminPage = () => {
           ) : (
             <p className="text-sm text-beach-navy/70">요약을 보려면 관리자 로그인 후 축제를 선택하세요.</p>
           )}
-          {token && festival && (
+          {adminSession?.token && festival && (
             <Button
               variant="secondary"
               className="w-auto px-3 py-2 text-sm"
-              onClick={() => loadSummary(festival.id, token)}
+              onClick={() => loadSummary(festival.id, adminSession.token)}
             >
               새로고침
             </Button>

@@ -8,6 +8,11 @@ export type AuthSession = {
   token: string;
 };
 
+export type AdminSession = {
+  adminId: string;
+  token: string;
+};
+
 export type Festival = {
   id: string;
   name: string;

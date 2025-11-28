@@ -1,4 +1,4 @@
-import { AuthSession, Coupon, Festival, Shop, Summary, TrashBin, TrashPhoto, User } from './types';
+import { AdminSession, AuthSession, Coupon, Festival, Shop, Summary, TrashBin, TrashPhoto, User } from './types';
 
 export const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const API_ORIGIN = API_BASE.replace(/\/api$/, '');
@@ -13,6 +13,12 @@ export const setAuthToken = (token?: string) => {
 const withAuth = (headers: HeadersInit = {}) => ({
   ...headers,
   ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+});
+
+const withAdminAuth = (token: string, headers: HeadersInit = {}) => ({
+  ...headers,
+  Authorization: `Bearer ${token}`,
+  'x-admin-token': token
 });
 
 const handle = async <T>(res: Response): Promise<T> => {
@@ -128,19 +134,19 @@ export const api = {
     return data.coupons;
   },
 
-  async adminLogin(password: string) {
-    const res = await fetch(`${API_BASE}/admin/login`, {
+  async adminLogin(adminId: string): Promise<AdminSession> {
+    const res = await fetch(`${API_BASE}/admin/mock-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ adminId })
     });
-    return handle<{ token: string }>(res);
+    return handle<AdminSession>(res);
   },
 
   async adminCreateFestival(payload: Partial<Festival> & { name: string }, token: string) {
     const res = await fetch(`${API_BASE}/admin/festivals`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      headers: withAdminAuth(token, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     return handle<{ festival: Festival }>(res);
@@ -149,7 +155,7 @@ export const api = {
   async adminGenerateBins(festivalId: string, count: number, token: string) {
     const res = await fetch(`${API_BASE}/admin/festivals/${festivalId}/trash-bins/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+      headers: withAdminAuth(token, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ count })
     });
     return handle<{ bins: TrashBin[] }>(res);
@@ -157,7 +163,7 @@ export const api = {
 
   async adminSummary(festivalId: string, token: string) {
     const res = await fetch(`${API_BASE}/admin/festivals/${festivalId}/summary`, {
-      headers: { 'x-admin-token': token }
+      headers: withAdminAuth(token)
     });
     return handle<{
       festival: Festival;
