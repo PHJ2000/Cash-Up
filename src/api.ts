@@ -41,11 +41,6 @@ export const api = {
     return data.festivals;
   },
 
-  async getFestival(festivalId: string): Promise<{ festival: Festival; bins: TrashBin[] }> {
-    const res = await fetch(`${API_BASE}/festivals/${festivalId}`);
-    return handle(res);
-  },
-
   async getSummary(userId: string, festivalId: string): Promise<{ festival: Festival; summary: Summary }> {
     const res = await fetch(`${API_BASE}/users/${userId}/summary?festivalId=${festivalId}`, {
       headers: withAuth()
