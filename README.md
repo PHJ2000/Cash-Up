@@ -52,8 +52,11 @@ uvicorn app.main:app --reload --port 4000   # http://localhost:4000
 ## 백엔드 스택 및 이미지/YOLO 처리
 - FastAPI + SQLAlchemy + SQLite
 - 이미지 처리/해싱: `Pillow`, `imagehash` (average hash, hamming distance)
-- 객체 인식: `ultralytics` YOLOv8 (`yolov8n.pt`) 로드 후 분석 결과를 DB에 저장 (has_trash, trash_count, max_confidence, raw_detections)
-- YOLO 실패/모델 미존재 시에도 업로드는 통과하며, 분석 필드는 `null`로 기록
+- 객체 인식: **Ultralytics HUB API** 사용 (클라우드 기반 YOLOv8)
+  - 로컬 GPU/고성능 CPU 불필요
+  - t2.micro/t3.small EC2로 운영 가능
+  - 분석 결과를 DB에 저장 (has_trash, trash_count, max_confidence, raw_detections)
+- YOLO 실패/API 키 미설정 시에도 업로드는 통과하며, 분석 필드는 `null`로 기록
 
 ## 업로드/QR 스캔 로직 (서버)
 - 업로드: 위치 검증 → 1분 5장 쿨타임 → 최근 20장 해시 비교(해밍 거리 ≤5 거절) → YOLO 결과 저장 → 페스티벌 예산/1인 상한(KST 일자) 내에서 PENDING 적립
@@ -75,7 +78,7 @@ uvicorn app.main:app --reload --port 4000   # http://localhost:4000
 - 정적 업로드 파일은 `/uploads/*` 경로로 제공
 
 ## 환경 변수
-`server/.env.example` 참고
+`server/.env.example` 또는 `.env.example` 참고
 ```
 DATABASE_URL="file:./dev.db"
 PORT=4000
@@ -83,9 +86,43 @@ ADMIN_PASSWORD="admin123"
 ADMIN_TOKEN="admin123"
 SECRET_KEY="dev-secret-key"   # 사용자 토큰 서명 키
 FESTIVAL_ID="" # 기본 축제 ID를 지정하고 싶을 때
+
+# Ultralytics HUB API (필수)
+ULTRALYTICS_API_KEY="api_your_key_here"  # https://hub.ultralytics.com 에서 발급
+YOLO_MODEL_ID="yolov8n"
 ```
+
+### Ultralytics HUB API 설정
+자세한 설정 방법은 [ULTRALYTICS_HUB_SETUP.md](./ULTRALYTICS_HUB_SETUP.md) 참고
+
+## 배포 (AWS EC2)
+
+GitHub Actions를 사용한 AWS EC2 자동 배포 지원
+
+### 빠른 시작
+```bash
+# 1. EC2 인스턴스 생성 및 초기 설정
+# 2. GitHub Secrets 설정 (EC2_HOST, EC2_USER, EC2_SSH_KEY, ENV_PRODUCTION)
+# 3. main 브랜치에 push하면 자동 배포
+```
+
+### 배포 문서
+- **📖 [QUICKSTART.md](./QUICKSTART.md)** - 빠른 시작 가이드 (핵심 단계만)
+- **📚 [DEPLOYMENT.md](./DEPLOYMENT.md)** - 상세 배포 가이드 (전체 설명)
+
+### 배포 구성
+- **프론트엔드**: Nginx로 정적 파일 서빙
+- **백엔드 (Python)**: PM2로 FastAPI 프로세스 관리
+- **백엔드 (Node.js)**: PM2로 Express 프로세스 관리 (선택사항)
+- **자동 배포**: GitHub Actions workflow (`.github/workflows/deploy.yml`)
+
+### 배포 스크립트
+- `deploy.sh` - 서버 배포 자동화 스크립트
+- `nginx.conf` - Nginx 리버스 프록시 설정
 
 ## 참고
 - 이미지 업로드는 서버 로컬 `server/uploads`에 저장, 정적 서빙 `/uploads/*`
 - QR 스캔은 숫자 코드 입력으로 대체 (카메라 라이브 스캔 라이브러리 필요 없음)
-- 실서비스 배포 시 YOLO 모델 파일이 없으면 자동 다운로드가 필요하므로 사전 배포 또는 수동 배치를 권장합니다.
+- **Ultralytics HUB API 사용으로 YOLO 모델 파일 다운로드 불필요** - EC2 비용 절감 가능
+- 프로덕션 환경에서는 SSL/HTTPS 설정 필수 (Let's Encrypt 사용 권장)
+- Ultralytics HUB Free Tier: 월 1,000 predictions 무료
