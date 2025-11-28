@@ -45,6 +45,7 @@ export type TrashPhoto = {
   hasTrash?: boolean | null;
   trashCount?: number | null;
   maxTrashConfidence?: number | null;
+  yoloRaw?: YoloRaw;
   createdAt: string;
 };
 
@@ -62,3 +63,22 @@ export type Shop = {
   amount: number;
   description: string;
 };
+
+export type YoloDetection = {
+  classId?: number;
+  className?: string;
+  confidence?: number;
+  bbox?: number[];
+};
+
+export type YoloRaw =
+  | {
+      detections?: YoloDetection[];
+      raw_detections?: YoloDetection[];
+      image_width?: number;
+      image_height?: number;
+      imageWidth?: number;
+      imageHeight?: number;
+    }
+  | YoloDetection[]
+  | null;

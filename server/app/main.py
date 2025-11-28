@@ -447,14 +447,27 @@ def upload_photo(
 
     yolo_result = analyze_trash(str(save_path))
 
+    trash_count = yolo_result.get("trash_count") if isinstance(yolo_result, dict) else None
+    detected_count = int(trash_count) if isinstance(trash_count, (int, float)) else None
+    detected_count = detected_count if detected_count is not None else 1
+    detected_count = max(detected_count, 0)
+    points_for_photo = festival.per_photo_point * detected_count
+
     summary = ensure_summary(db, user_id, festival_id)
     today_total = summary.total_pending + summary.total_active + summary.total_consumed
     if today_total >= festival.per_user_daily_cap:
         save_path.unlink(missing_ok=True)
         http_error(400, "오늘 한도가 모두 사용되었습니다.")
+    remaining_cap = max(0, festival.per_user_daily_cap - today_total)
+    if remaining_cap <= 0:
+        save_path.unlink(missing_ok=True)
+        http_error(400, "오늘 한도가 모두 사용되었습니다.")
+
+    points_for_photo = min(points_for_photo, remaining_cap)
 
     try:
-        ensure_budget_room(db, festival, festival.per_photo_point)
+        if points_for_photo > 0:
+            ensure_budget_room(db, festival, points_for_photo)
     except HTTPException:
         save_path.unlink(missing_ok=True)
         raise
@@ -465,17 +478,53 @@ def upload_photo(
         image_url=f"/uploads/{file_name}",
         hash=new_hash,
         status=PHOTO_STATUS_PENDING,
-        points=festival.per_photo_point,
+        points=points_for_photo,
         has_trash=yolo_result.get("has_trash") if isinstance(yolo_result, dict) else None,
-        trash_count=yolo_result.get("trash_count") if isinstance(yolo_result, dict) else None,
+        trash_count=trash_count,
         max_trash_confidence=yolo_result.get("max_trash_confidence") if isinstance(yolo_result, dict) else None,
-        yolo_raw=yolo_result.get("raw_detections") if isinstance(yolo_result, dict) else None,
+        yolo_raw=yolo_result if isinstance(yolo_result, dict) else None,
     )
     db.add(photo)
-    summary.total_pending += festival.per_photo_point
+    summary.total_pending += points_for_photo
     db.flush()
     db.refresh(photo)
     db.refresh(summary)
+
+    # 잭팟 풀 업데이트 및 참가 등록
+    jackpot_pool = (
+        db.execute(select(JackpotPool).where(JackpotPool.festival_id == festival_id)).scalar_one_or_none()
+    )
+    if not jackpot_pool:
+        jackpot_pool = JackpotPool(festival_id=festival_id)
+        db.add(jackpot_pool)
+        db.flush()
+
+    contribution = int(points_for_photo * jackpot_pool.contribution_rate)
+    jackpot_pool.current_amount += contribution
+
+    now_kst = datetime.now(KST)
+    week_key = f"{now_kst.year}-W{now_kst.isocalendar()[1]:02d}"
+    entry = (
+        db.execute(
+            select(JackpotEntry).where(
+                JackpotEntry.user_id == user_id,
+                JackpotEntry.festival_id == festival_id,
+                JackpotEntry.week_key == week_key,
+            )
+        ).scalar_one_or_none()
+    )
+    if entry:
+        entry.entry_count += 1
+    else:
+        db.add(
+            JackpotEntry(
+                user_id=user_id,
+                festival_id=festival_id,
+                week_key=week_key,
+            )
+        )
+    db.flush()
+
 
     return {
         "photo": serialize_photo(photo),
@@ -484,7 +533,7 @@ def upload_photo(
             "totalActive": summary.total_active,
             "totalConsumed": summary.total_consumed,
         },
-        "message": f"+{festival.per_photo_point}원 지급 대기 상태로 적립되었어요.",
+        "message": f"쓰레기 {trash_count if trash_count is not None else '?'}개 감지 → +{points_for_photo}원 지급 대기 적립되었어요.",
     }
 
 
