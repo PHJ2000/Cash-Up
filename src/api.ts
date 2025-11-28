@@ -62,11 +62,15 @@ export const api = {
     file: File;
     lat?: number;
     lng?: number;
+    fallbackLat?: number;
+    fallbackLng?: number;
   }) {
     const form = new FormData();
     form.append('userId', params.userId);
-    if (params.lat !== undefined) form.append('lat', String(params.lat));
-    if (params.lng !== undefined) form.append('lng', String(params.lng));
+    const lat = params.lat ?? params.fallbackLat;
+    const lng = params.lng ?? params.fallbackLng;
+    if (lat !== undefined) form.append('lat', String(lat));
+    if (lng !== undefined) form.append('lng', String(lng));
     form.append('image', params.file);
     const res = await fetch(`${API_BASE}/festivals/${params.festivalId}/trash-photos`, {
       method: 'POST',
@@ -86,11 +90,23 @@ export const api = {
     return data.bins;
   },
 
-  async scanBin(params: { userId: string; festivalId: string; binCode: string; lat?: number; lng?: number }) {
+  async scanBin(params: {
+    userId: string;
+    festivalId: string;
+    binCode: string;
+    lat?: number;
+    lng?: number;
+    fallbackLat?: number;
+    fallbackLng?: number;
+  }) {
     const res = await fetch(`${API_BASE}/festivals/${params.festivalId}/trash-bins/scan`, {
       method: 'POST',
       headers: withAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify(params)
+      body: JSON.stringify({
+        ...params,
+        lat: params.lat ?? params.fallbackLat,
+        lng: params.lng ?? params.fallbackLng
+      })
     });
     return handle<{
       activated: number;

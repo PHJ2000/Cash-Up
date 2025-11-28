@@ -21,8 +21,7 @@ export const MissionUploadPage = () => {
   const [cameraLoading, setCameraLoading] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
+  const startCamera = useCallback(async () => {
     if (!window.isSecureContext) {
       setCameraError('https 또는 localhost 환경에서만 카메라를 사용할 수 있습니다.');
       setCameraLoading(false);
@@ -33,41 +32,49 @@ export const MissionUploadPage = () => {
       setCameraLoading(false);
       return;
     }
+    setCameraLoading(true);
+    setCameraError(null);
+    try {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      streamRef.current = stream;
+      const [track] = stream.getVideoTracks();
+      if (track) {
+        track.onended = () => {
+          setCameraReady(false);
+          setCameraLoading(true);
+          startCamera();
+        };
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraReady(true);
+      setCameraLoading(false);
+      setCameraError(null);
+    } catch (err) {
+      setCameraError('카메라 접근이 어렵습니다. 권한을 확인해주세요.');
+      setCameraLoading(false);
+      setCameraReady(false);
+    }
+  }, []);
 
-    const enableCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        if (!mounted) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        if (mounted) {
-          setCameraReady(true);
-          setCameraLoading(false);
-          setCameraError(null);
-        }
-      } catch (err) {
-        if (!mounted) return;
-        setCameraError('카메라 접근이 어렵습니다. 권한을 확인해주세요.');
-        setCameraLoading(false);
-        setCameraReady(false);
+  useEffect(() => {
+    startCamera();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !cameraReady && !cameraLoading) {
+        startCamera();
       }
     };
-
-    enableCamera();
-
+    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      mounted = false;
+      document.removeEventListener('visibilitychange', handleVisibility);
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [cameraLoading, cameraReady, startCamera]);
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -82,7 +89,9 @@ export const MissionUploadPage = () => {
           festivalId: festival.id,
           file,
           lat: coords?.lat,
-          lng: coords?.lng
+          lng: coords?.lng,
+          fallbackLat: festival.centerLat ?? undefined,
+          fallbackLng: festival.centerLng ?? undefined
         });
         setMessage(res.message);
         await refreshSummary();
