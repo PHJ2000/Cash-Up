@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+import random
 import imagehash
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
@@ -25,6 +26,9 @@ from .models import (
     BinScan,
     Coupon,
     Festival,
+    JackpotEntry,
+    JackpotPool,
+    JackpotWinner,
     TrashBin,
     TrashPhoto,
     User,
@@ -477,6 +481,41 @@ def upload_photo(
     db.refresh(photo)
     db.refresh(summary)
 
+    # 잭팟 풀 업데이트 및 참가 등록
+    jackpot_pool = (
+        db.execute(select(JackpotPool).where(JackpotPool.festival_id == festival_id)).scalar_one_or_none()
+    )
+    if not jackpot_pool:
+        jackpot_pool = JackpotPool(festival_id=festival_id)
+        db.add(jackpot_pool)
+        db.flush()
+
+    contribution = int(festival.per_photo_point * jackpot_pool.contribution_rate)
+    jackpot_pool.current_amount += contribution
+
+    now_kst = datetime.now(KST)
+    week_key = f"{now_kst.year}-W{now_kst.isocalendar()[1]:02d}"
+    entry = (
+        db.execute(
+            select(JackpotEntry).where(
+                JackpotEntry.user_id == user_id,
+                JackpotEntry.festival_id == festival_id,
+                JackpotEntry.week_key == week_key,
+            )
+        ).scalar_one_or_none()
+    )
+    if entry:
+        entry.entry_count += 1
+    else:
+        db.add(
+            JackpotEntry(
+                user_id=user_id,
+                festival_id=festival_id,
+                week_key=week_key,
+            )
+        )
+    db.flush()
+
     return {
         "photo": serialize_photo(photo),
         "summary": {
@@ -806,4 +845,96 @@ def admin_summary(
         "budgetUsed": get_budget_usage(db, festival_id),
         "budgetRemaining": max(0, festival.budget - get_budget_usage(db, festival_id)),
         "binUsage": usage,
+    }
+
+
+@app.get("/api/festivals/{festival_id}/jackpot")
+def get_jackpot(festival_id: str, db: Session = Depends(get_db_dep)):
+    pool = db.execute(select(JackpotPool).where(JackpotPool.festival_id == festival_id)).scalar_one_or_none()
+    if not pool:
+        return {"current_amount": 0, "last_winner_name": None}
+
+    last_winner_name = None
+    if pool.last_winner_id:
+        winner = db.get(User, pool.last_winner_id)
+        if winner:
+            last_winner_name = winner.display_name
+
+    return {
+        "current_amount": pool.current_amount,
+        "last_winner_name": last_winner_name,
+        "last_draw_date": pool.last_draw_date,
+    }
+
+
+@app.post("/api/admin/festivals/{festival_id}/jackpot/draw")
+def draw_jackpot(
+    festival_id: str,
+    x_admin_token: Optional[str] = Header(None),
+    db: Session = Depends(get_db_dep),
+):
+    require_admin(x_admin_token)
+    pool = db.execute(select(JackpotPool).where(JackpotPool.festival_id == festival_id)).scalar_one_or_none()
+    if not pool:
+        http_error(404, "잭팟 풀 없음")
+
+    now_kst = datetime.now(KST)
+    week_key = f"{now_kst.year}-W{now_kst.isocalendar()[1]:02d}"
+    entries = (
+        db.execute(
+            select(JackpotEntry).where(
+                JackpotEntry.festival_id == festival_id,
+                JackpotEntry.week_key == week_key,
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    if not entries:
+        http_error(400, "참가자 없음")
+
+    users = [entry.user_id for entry in entries]
+    weights = [entry.entry_count for entry in entries]
+    winner_id = random.choices(users, weights=weights, k=1)[0]
+    winner = db.get(User, winner_id)
+    if not winner:
+        http_error(404, "당첨자 정보를 찾을 수 없습니다.")
+
+    today = now_kst.strftime("%Y-%m-%d")
+    summary = (
+        db.execute(
+            select(UserDailySummary).where(
+                UserDailySummary.user_id == winner_id,
+                UserDailySummary.festival_id == festival_id,
+                UserDailySummary.date == today,
+            )
+        ).scalar_one_or_none()
+    )
+
+    if not summary:
+        summary = UserDailySummary(user_id=winner_id, festival_id=festival_id, date=today)
+        db.add(summary)
+
+    summary.total_active += pool.current_amount
+
+    winner_record = JackpotWinner(
+        user_id=winner_id,
+        festival_id=festival_id,
+        week_key=week_key,
+        amount=pool.current_amount,
+    )
+    db.add(winner_record)
+
+    awarded_amount = pool.current_amount
+    pool.current_amount = pool.seed_amount
+    pool.last_winner_id = winner_id
+    pool.last_draw_date = today
+
+    db.commit()
+
+    return {
+        "winner_name": winner.display_name,
+        "amount": awarded_amount,
+        "message": f"🎉 {winner.display_name}님 당첨! {awarded_amount:,}원",
     }
