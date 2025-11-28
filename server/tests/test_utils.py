@@ -46,6 +46,8 @@ def test_analyze_trash_without_model(tmp_path: Path, monkeypatch):
 
     monkeypatch.setattr("app.yolo_utils.YOLO", None)
     monkeypatch.setattr("app.yolo_utils._model", None)
+    monkeypatch.setattr("app.yolo_utils.YOLO_REMOTE_URL", None)
+    monkeypatch.setattr("app.yolo_utils.YOLO_REMOTE_API_KEY", None)
 
     result = analyze_trash(str(img_path))
     assert result["has_trash"] is None

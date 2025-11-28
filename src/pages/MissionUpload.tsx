@@ -1,11 +1,49 @@
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api';
+import { api, resolveImageUrl } from '../api';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Layout } from '../components/Layout';
 import { useLocation } from '../hooks/useLocation';
 import { useAppState } from '../state/AppStateContext';
+import { TrashPhoto } from '../types';
+
+type NormalizedDetection = {
+  className: string;
+  confidence: number;
+  bbox: [number, number, number, number];
+};
+
+type NormalizedDetectionSet = {
+  detections: NormalizedDetection[];
+  imageWidth: number | null;
+  imageHeight: number | null;
+};
+
+const normalizeDetections = (raw: TrashPhoto['yoloRaw']): NormalizedDetectionSet | null => {
+  if (!raw) return null;
+  const rawObj = Array.isArray(raw) ? { detections: raw } : raw;
+  const detections = rawObj.detections ?? rawObj.raw_detections ?? [];
+  const parsed = detections
+    .map((det) => {
+      const bbox = det.bbox ?? [];
+      if (!bbox || bbox.length !== 4) return null;
+      return {
+        className: det.className ?? (det as any).class_name ?? 'trash',
+        confidence: det.confidence ?? 0,
+        bbox: [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
+      };
+    })
+    .filter(Boolean) as NormalizedDetection[];
+  const width = rawObj.image_width ?? rawObj.imageWidth;
+  const height = rawObj.image_height ?? rawObj.imageHeight;
+  if (!parsed.length) return null;
+  return {
+    detections: parsed,
+    imageWidth: typeof width === 'number' ? width : null,
+    imageHeight: typeof height === 'number' ? height : null,
+  };
+};
 
 export const MissionUploadPage = () => {
   const navigate = useNavigate();
@@ -20,6 +58,12 @@ export const MissionUploadPage = () => {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
+  const [simpleCaptureMode, setSimpleCaptureMode] = useState(false);
+  const [everReady, setEverReady] = useState(false);
+  const [trashCount, setTrashCount] = useState<number | null>(null);
+  const [maxConfidence, setMaxConfidence] = useState<number | null>(null);
+  const [normalizedDetections, setNormalizedDetections] = useState<NormalizedDetectionSet | null>(null);
+  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -73,6 +117,10 @@ export const MissionUploadPage = () => {
     async (file: File) => {
       if (!user || !festival) return;
       setPreview(URL.createObjectURL(file));
+      setTrashCount(null);
+      setMaxConfidence(null);
+      setNormalizedDetections(null);
+      setImageSize(null);
       setMessage(null);
       setError(null);
       setUploading(true);
@@ -84,7 +132,16 @@ export const MissionUploadPage = () => {
           lat: coords?.lat,
           lng: coords?.lng
         });
+        const photo = res.photo;
         setMessage(res.message);
+        setPreview(resolveImageUrl(photo.imageUrl));
+        setTrashCount(photo.trashCount ?? null);
+        setMaxConfidence(photo.maxTrashConfidence ?? null);
+        const parsed = normalizeDetections(photo.yoloRaw);
+        setNormalizedDetections(parsed);
+        if (parsed?.imageWidth && parsed?.imageHeight) {
+          setImageSize({ width: parsed.imageWidth, height: parsed.imageHeight });
+        }
         await refreshSummary();
       } catch (err) {
         setError(err instanceof Error ? err.message : '업로드 중 문제가 발생했어요.');
@@ -201,7 +258,56 @@ export const MissionUploadPage = () => {
         {preview && (
           <Card className="space-y-2">
             <p className="text-sm text-beach-navy/70">업로드 미리보기</p>
-            <img src={preview} alt="preview" className="w-full rounded-xl object-cover shadow" />
+            <div className="relative">
+              <img
+                src={preview}
+                alt="preview"
+                className="w-full rounded-xl object-cover shadow"
+                onLoad={(e) => {
+                  const { naturalWidth, naturalHeight } = e.currentTarget;
+                  if (naturalWidth && naturalHeight) {
+                    setImageSize({ width: naturalWidth, height: naturalHeight });
+                  }
+                }}
+              />
+              {normalizedDetections && imageSize && (
+                <div className="pointer-events-none absolute inset-0">
+                  {normalizedDetections.detections.map((det, idx) => {
+                    const baseWidth = normalizedDetections.imageWidth || imageSize.width;
+                    const baseHeight = normalizedDetections.imageHeight || imageSize.height;
+                    if (!baseWidth || !baseHeight) return null;
+                    const [x1, y1, x2, y2] = det.bbox;
+                    const left = (x1 / baseWidth) * 100;
+                    const top = (y1 / baseHeight) * 100;
+                    const width = ((x2 - x1) / baseWidth) * 100;
+                    const height = ((y2 - y1) / baseHeight) * 100;
+                    return (
+                      <div
+                        key={`${det.className}-${idx}`}
+                        className="absolute rounded-lg border-2 border-emerald-400/90 bg-emerald-400/10 text-[10px] font-semibold text-white shadow-lg"
+                        style={{
+                          left: `${left}%`,
+                          top: `${top}%`,
+                          width: `${width}%`,
+                          height: `${height}%`,
+                          backdropFilter: 'blur(1px)',
+                        }}
+                      >
+                        <div className="absolute left-0 top-0 m-0.5 rounded bg-emerald-500/90 px-1 py-[1px]">
+                          {det.className} {(det.confidence * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-beach-navy/70">
+              감지된 쓰레기: {trashCount ?? '—'}개{' '}
+              {typeof maxConfidence === 'number' && (
+                <span className="text-[11px] text-beach-navy/60">(최대 신뢰도 {(maxConfidence * 100).toFixed(0)}%)</span>
+              )}
+            </div>
           </Card>
         )}
 
