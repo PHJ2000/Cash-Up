@@ -284,7 +284,7 @@ def health():
 def mock_login(payload: dict, db: Session = Depends(get_db_dep)):
     nickname = payload.get("nickname")
     if not nickname:
-        http_error(400, "닉네임을 입력해 주세요.")
+        http_error(400, "닉네임을 입력해 ")
     user = User(provider="mock", provider_user_id=str(time.time_ns()), display_name=nickname)
     db.add(user)
     db.flush()

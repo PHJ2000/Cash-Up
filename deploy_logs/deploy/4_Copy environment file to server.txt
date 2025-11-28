@@ -1,0 +1,67 @@
+﻿2025-11-28T12:18:25.4096420Z ##[group]Run echo "📤 Copying .env.production to server..."
+2025-11-28T12:18:25.4096989Z [36;1mecho "📤 Copying .env.production to server..."[0m
+2025-11-28T12:18:25.4097440Z [36;1mif [ ! -f .env.production ]; then[0m
+2025-11-28T12:18:25.4097869Z [36;1m  echo "❌ Error: .env.production file not found"[0m
+2025-11-28T12:18:25.4098273Z [36;1m  exit 1[0m
+2025-11-28T12:18:25.4098560Z [36;1mfi[0m
+2025-11-28T12:18:25.4099109Z [36;1mscp -v -i ~/.ssh/id_rsa .env.production ***@***:/tmp/ || {[0m
+2025-11-28T12:18:25.4099584Z [36;1m  echo "❌ Failed to copy .env.production file"[0m
+2025-11-28T12:18:25.4099968Z [36;1m  exit 1[0m
+2025-11-28T12:18:25.4100290Z [36;1m}[0m
+2025-11-28T12:18:25.4100625Z [36;1mecho "✅ Environment file copied successfully"[0m
+2025-11-28T12:18:25.4135827Z shell: /usr/bin/bash -e {0}
+2025-11-28T12:18:25.4136222Z ##[endgroup]
+2025-11-28T12:18:25.4189271Z 📤 Copying .env.production to server...
+2025-11-28T12:18:25.4591927Z Executing: program /usr/bin/ssh host ***, user ***, command sftp
+2025-11-28T12:18:25.4899358Z OpenSSH_9.6p1 Ubuntu-3***13.14, OpenSSL 3.0.13 30 Jan 2024
+2025-11-28T12:18:25.4900087Z debug1: Reading configuration data /etc/ssh/ssh_config
+2025-11-28T12:18:25.4905450Z debug1: /etc/ssh/ssh_config line 19: include /etc/ssh/ssh_config.d/*.conf matched no files
+2025-11-28T12:18:25.4906326Z debug1: /etc/ssh/ssh_config line 21: Applying options for *
+2025-11-28T12:18:25.4934793Z debug1: Connecting to *** [***] port 22.
+2025-11-28T12:18:25.6678643Z debug1: Connection established.
+2025-11-28T12:18:25.6679743Z debug1: identity file /home/runner/.ssh/id_rsa type -1
+2025-11-28T12:18:25.6680451Z debug1: identity file /home/runner/.ssh/id_rsa-cert type -1
+2025-11-28T12:18:25.6681481Z debug1: Local version string SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:25.8512413Z debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:25.8513887Z debug1: compat_banner: match: OpenSSH_9.6p1 Ubuntu-3***13.14 pat OpenSSH* compat 0x04000000
+2025-11-28T12:18:25.8514865Z debug1: Authenticating to ***:22 as '***'
+2025-11-28T12:18:25.8515485Z debug1: load_hostkeys: fopen /home/runner/.ssh/known_hosts2: No such file or directory
+2025-11-28T12:18:25.8555727Z debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+2025-11-28T12:18:25.8556396Z debug1: SSH2_MSG_KEXINIT sent
+2025-11-28T12:18:26.0255671Z debug1: SSH2_MSG_KEXINIT received
+2025-11-28T12:18:26.0256815Z debug1: kex: algorithm: sntrup761x25519-sha512@openssh.com
+2025-11-28T12:18:26.0257870Z debug1: kex: host key algorithm: ssh-ed25519
+2025-11-28T12:18:26.0259318Z debug1: kex: server->client cipher: chacha20-poly1305@openssh.com MAC: <implicit> compression: none
+2025-11-28T12:18:26.0261450Z debug1: kex: client->server cipher: chacha20-poly1305@openssh.com MAC: <implicit> compression: none
+2025-11-28T12:18:26.0819102Z debug1: expecting SSH2_MSG_KEX_ECDH_REPLY
+2025-11-28T12:18:26.2703965Z debug1: SSH2_MSG_KEX_ECDH_REPLY received
+2025-11-28T12:18:26.2705264Z debug1: Server host key: ssh-ed25519 SHA256:DRDWcwWSRxoYIvge6VNWCzwS5FzJG/3f9Gr7B2ptJAU
+2025-11-28T12:18:26.2708573Z debug1: load_hostkeys: fopen /home/runner/.ssh/known_hosts2: No such file or directory
+2025-11-28T12:18:26.2710020Z debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+2025-11-28T12:18:26.2711801Z debug1: Host '***' is known and matches the ED25519 host key.
+2025-11-28T12:18:26.2712916Z debug1: Found key in /home/runner/.ssh/known_hosts:3
+2025-11-28T12:18:26.2959663Z debug1: ssh_packet_send2_wrapped: resetting send seqnr 3
+2025-11-28T12:18:26.2960449Z debug1: rekey out after 134217728 blocks
+2025-11-28T12:18:26.2961094Z debug1: SSH2_MSG_NEWKEYS sent
+2025-11-28T12:18:26.2962283Z debug1: Sending SSH2_MSG_EXT_INFO
+2025-11-28T12:18:26.2962922Z debug1: expecting SSH2_MSG_NEWKEYS
+2025-11-28T12:18:26.2963644Z debug1: ssh_packet_read_poll2: resetting read seqnr 3
+2025-11-28T12:18:26.2964365Z debug1: SSH2_MSG_NEWKEYS received
+2025-11-28T12:18:26.2964987Z debug1: rekey in after 134217728 blocks
+2025-11-28T12:18:26.2966022Z debug1: SSH2_MSG_EXT_INFO received
+2025-11-28T12:18:26.2968022Z debug1: kex_ext_info_client_parse: server-sig-algs=<ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,rsa-sha2-512,rsa-sha2-256>
+2025-11-28T12:18:26.2970327Z debug1: kex_ext_info_check_ver: publickey-hostbound@openssh.com=<0>
+2025-11-28T12:18:26.2971164Z debug1: kex_ext_info_check_ver: ping@openssh.com=<0>
+2025-11-28T12:18:26.6844247Z debug1: SSH2_MSG_SERVICE_ACCEPT received
+2025-11-28T12:18:26.8609294Z debug1: SSH2_MSG_EXT_INFO received
+2025-11-28T12:18:26.8613266Z debug1: kex_ext_info_client_parse: server-sig-algs=<ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,rsa-sha2-512,rsa-sha2-256>
+2025-11-28T12:18:26.8615635Z debug1: Authentications that can continue: publickey
+2025-11-28T12:18:26.8616664Z debug1: Next authentication method: publickey
+2025-11-28T12:18:26.8617598Z debug1: Will attempt key: /home/runner/.ssh/id_rsa  explicit
+2025-11-28T12:18:26.8618599Z debug1: Trying private key: /home/runner/.ssh/id_rsa
+2025-11-28T12:18:26.8619797Z Load key "/home/runner/.ssh/id_rsa": error in libcrypto
+2025-11-28T12:18:26.8621920Z debug1: No more authentication methods to try.
+2025-11-28T12:18:26.8622970Z ***@***: Permission denied (publickey).
+2025-11-28T12:18:26.8627777Z scp: Connection closed
+2025-11-28T12:18:26.8629723Z ❌ Failed to copy .env.production file
+2025-11-28T12:18:26.8643539Z ##[error]Process completed with exit code 1.

@@ -1,0 +1,71 @@
+﻿2025-11-28T12:18:21.7589874Z ##[group]Run actions/checkout@v4
+2025-11-28T12:18:21.7590895Z with:
+2025-11-28T12:18:21.7591929Z   repository: PHJ2000/Cash-Up
+2025-11-28T12:18:21.7592838Z   token: ***
+2025-11-28T12:18:21.7593403Z   ssh-strict: true
+2025-11-28T12:18:21.7593983Z   ssh-user: git
+2025-11-28T12:18:21.7594582Z   persist-credentials: true
+2025-11-28T12:18:21.7595217Z   clean: true
+2025-11-28T12:18:21.7595799Z   sparse-checkout-cone-mode: true
+2025-11-28T12:18:21.7596461Z   fetch-depth: 1
+2025-11-28T12:18:21.7597014Z   fetch-tags: false
+2025-11-28T12:18:21.7597590Z   show-progress: true
+2025-11-28T12:18:21.7598168Z   lfs: false
+2025-11-28T12:18:21.7598722Z   submodules: false
+2025-11-28T12:18:21.7599310Z   set-safe-directory: true
+2025-11-28T12:18:21.7600250Z ##[endgroup]
+2025-11-28T12:18:21.8698864Z Syncing repository: PHJ2000/Cash-Up
+2025-11-28T12:18:21.8700807Z ##[group]Getting Git version info
+2025-11-28T12:18:21.8701912Z Working directory is '/home/runner/work/Cash-Up/Cash-Up'
+2025-11-28T12:18:21.8703142Z [command]/usr/bin/git version
+2025-11-28T12:18:22.1405494Z git version 2.51.2
+2025-11-28T12:18:22.1433406Z ##[endgroup]
+2025-11-28T12:18:22.1447872Z Temporarily overriding HOME='/home/runner/work/_temp/1efdd701-42b9-407e-a309-5c12ec506499' before making global git config changes
+2025-11-28T12:18:22.1450155Z Adding repository directory to the temporary git global config as a safe directory
+2025-11-28T12:18:22.1460928Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Cash-Up/Cash-Up
+2025-11-28T12:18:22.1499193Z Deleting the contents of '/home/runner/work/Cash-Up/Cash-Up'
+2025-11-28T12:18:22.1503222Z ##[group]Initializing the repository
+2025-11-28T12:18:22.1506869Z [command]/usr/bin/git init /home/runner/work/Cash-Up/Cash-Up
+2025-11-28T12:18:22.1614167Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-11-28T12:18:22.1616461Z hint: is subject to change. To configure the initial branch name to use in all
+2025-11-28T12:18:22.1618302Z hint: of your new repositories, which will suppress this warning, call:
+2025-11-28T12:18:22.1619800Z hint:
+2025-11-28T12:18:22.1620873Z hint: 	git config --global init.defaultBranch <name>
+2025-11-28T12:18:22.1622360Z hint:
+2025-11-28T12:18:22.1623684Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-11-28T12:18:22.1625539Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-11-28T12:18:22.1627446Z hint:
+2025-11-28T12:18:22.1628436Z hint: 	git branch -m <name>
+2025-11-28T12:18:22.1629462Z hint:
+2025-11-28T12:18:22.1630748Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2025-11-28T12:18:22.1633040Z Initialized empty Git repository in /home/runner/work/Cash-Up/Cash-Up/.git/
+2025-11-28T12:18:22.1636265Z [command]/usr/bin/git remote add origin https://github.com/PHJ2000/Cash-Up
+2025-11-28T12:18:22.1665947Z ##[endgroup]
+2025-11-28T12:18:22.1667588Z ##[group]Disabling automatic garbage collection
+2025-11-28T12:18:22.1669289Z [command]/usr/bin/git config --local gc.auto 0
+2025-11-28T12:18:22.1699953Z ##[endgroup]
+2025-11-28T12:18:22.1700869Z ##[group]Setting up auth
+2025-11-28T12:18:22.1706671Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-11-28T12:18:22.1736541Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-11-28T12:18:22.2060055Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-11-28T12:18:22.2089749Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-11-28T12:18:22.2306573Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2025-11-28T12:18:22.2336221Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2025-11-28T12:18:22.2597065Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-11-28T12:18:22.2632107Z ##[endgroup]
+2025-11-28T12:18:22.2633765Z ##[group]Fetching the repository
+2025-11-28T12:18:22.2641961Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +406d88ceba0d397fd4c4f1355d2b20fced656c80:refs/remotes/origin/main
+2025-11-28T12:18:22.8532215Z From https://github.com/PHJ2000/Cash-Up
+2025-11-28T12:18:22.8537564Z  * [new ref]         406d88ceba0d397fd4c4f1355d2b20fced656c80 -> origin/main
+2025-11-28T12:18:22.8568787Z ##[endgroup]
+2025-11-28T12:18:22.8570547Z ##[group]Determining the checkout info
+2025-11-28T12:18:22.8572634Z ##[endgroup]
+2025-11-28T12:18:22.8577314Z [command]/usr/bin/git sparse-checkout disable
+2025-11-28T12:18:22.8620054Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-11-28T12:18:22.8648946Z ##[group]Checking out the ref
+2025-11-28T12:18:22.8653208Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2025-11-28T12:18:22.9108412Z Switched to a new branch 'main'
+2025-11-28T12:18:22.9109857Z branch 'main' set up to track 'origin/main'.
+2025-11-28T12:18:22.9117273Z ##[endgroup]
+2025-11-28T12:18:22.9154403Z [command]/usr/bin/git log -1 --format=%H
+2025-11-28T12:18:22.9176825Z 406d88ceba0d397fd4c4f1355d2b20fced656c80

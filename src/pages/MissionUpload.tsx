@@ -204,8 +204,15 @@ export const MissionUploadPage = () => {
           </div>
           <p className="text-xs text-beach-navy/60">같은 사진을 반복 업로드하거나 연속 촬영은 제한될 수 있어요.</p>
         </Card>
-        {locationError && <p className="text-xs text-rose-600">{locationError}</p>}
-        <p className="text-xs text-beach-navy/60">{locationLoading ? '위치 확인 중...' : locationText}</p>
+        {locationError && (
+          <Card className="border border-amber-200 bg-amber-50">
+            <p className="text-xs text-amber-800">{locationError}</p>
+            <p className="text-xs text-amber-700 mt-1">위치 정보가 없어도 촬영은 가능합니다.</p>
+          </Card>
+        )}
+        {!locationError && (
+          <p className="text-xs text-beach-navy/60">{locationLoading ? '위치 확인 중...' : locationText}</p>
+        )}
 
         {preview && (
           <Card className="space-y-2">
