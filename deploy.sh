@@ -1,9 +1,31 @@
 #!/bin/bash
-set -e
+set -e  # Exit on error
+set -o pipefail  # Exit on pipe failures
 
 echo "========================================="
 echo "🚀 Cash-Up Deployment Script"
 echo "========================================="
+echo "Started at: $(date)"
+echo ""
+
+# Error handler
+error_handler() {
+    echo ""
+    echo "❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌"
+    echo "❌ DEPLOYMENT SCRIPT FAILED!"
+    echo "❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌"
+    echo ""
+    echo "Error occurred in: $BASH_COMMAND"
+    echo "At line: $1"
+    echo "Exit code: $2"
+    echo ""
+    echo "Current directory: $(pwd)"
+    echo "Time: $(date)"
+    echo ""
+    exit $2
+}
+
+trap 'error_handler ${LINENO} $?' ERR
 
 # 변수 설정
 APP_DIR="/var/www/cash-up"
@@ -42,8 +64,18 @@ source venv/bin/activate
 
 # Python 의존성 설치
 echo "📥 Installing Python dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
+if ! pip install --upgrade pip; then
+    echo "❌ Failed to upgrade pip"
+    exit 1
+fi
+
+if ! pip install -r requirements.txt; then
+    echo "❌ Failed to install Python dependencies"
+    echo "Requirements file content:"
+    cat requirements.txt
+    exit 1
+fi
+echo "✅ Python dependencies installed successfully"
 
 # Ultralytics HUB API 사용 확인
 if grep -q "ULTRALYTICS_API_KEY" .env 2>/dev/null; then
@@ -85,17 +117,31 @@ cd $BACKEND_DIR
 
 if [ -f "package.json" ]; then
     echo "📥 Installing Node.js dependencies..."
-    npm install
+    if ! npm install; then
+        echo "❌ Failed to install Node.js dependencies"
+        echo "Node version: $(node --version)"
+        echo "NPM version: $(npm --version)"
+        exit 1
+    fi
+    echo "✅ Node.js dependencies installed"
 
     echo "🔨 Generating Prisma Client..."
-    npx prisma generate
+    if ! npx prisma generate; then
+        echo "❌ Failed to generate Prisma client"
+        exit 1
+    fi
+    echo "✅ Prisma client generated"
 
     echo "🔄 Running Prisma migrations (if needed)..."
     npx prisma migrate deploy 2>/dev/null || echo "⚠️  No migrations to run"
 
     if [ -f "tsconfig.json" ]; then
         echo "🔨 Building TypeScript..."
-        npm run build || echo "⚠️  Build failed or not configured"
+        if ! npm run build; then
+            echo "❌ TypeScript build failed"
+            exit 1
+        fi
+        echo "✅ TypeScript build successful"
     fi
 
     echo "🔄 Restarting Node.js service..."
@@ -119,17 +165,35 @@ echo "========================================="
 cd $FRONTEND_DIR
 
 echo "📥 Installing frontend dependencies..."
-npm install
+if ! npm install; then
+    echo "❌ Failed to install frontend dependencies"
+    echo "Node version: $(node --version)"
+    echo "NPM version: $(npm --version)"
+    echo "Package.json location: $(pwd)/package.json"
+    exit 1
+fi
+echo "✅ Frontend dependencies installed"
 
 echo "🔨 Building React application..."
-npm run build
+if ! npm run build; then
+    echo "❌ Frontend build failed"
+    echo "Check Vite configuration and build errors above"
+    echo "Environment variables:"
+    cat .env.production 2>/dev/null || echo "No .env.production file"
+    exit 1
+fi
 
 if [ ! -d "dist" ]; then
     echo "❌ Error: Build failed - dist directory not found!"
+    echo "Current directory: $(pwd)"
+    ls -la
     exit 1
 fi
 
 echo "✅ Frontend built successfully!"
+echo "📦 Build output:"
+du -sh dist/
+ls -lh dist/
 echo ""
 
 # ==========================================
