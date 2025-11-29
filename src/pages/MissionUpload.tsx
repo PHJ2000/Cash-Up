@@ -60,6 +60,13 @@ export const MissionUploadPage = () => {
   const [cameraReady, setCameraReady] = useState(false);
   const [simpleCaptureMode, setSimpleCaptureMode] = useState(false);
   const [everReady, setEverReady] = useState(false);
+  const cameraReadyRef = useRef(false);
+  const cameraErrorRef = useRef<string | null>(null);
+
+  const hasLiveStream = useCallback(
+    () => streamRef.current?.getTracks().some((track) => track.readyState === 'live') ?? false,
+    []
+  );
   const [trashCount, setTrashCount] = useState<number | null>(null);
   const [maxConfidence, setMaxConfidence] = useState<number | null>(null);
   const [normalizedDetections, setNormalizedDetections] = useState<NormalizedDetectionSet | null>(null);
@@ -77,41 +84,121 @@ export const MissionUploadPage = () => {
       setCameraLoading(false);
       return;
     }
-
-    const enableCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        if (!mounted) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        if (mounted) {
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
+    }
+    if (hasLiveStream() && !cameraErrorRef.current) {
+      setCameraReady(true);
+      setCameraLoading(false);
+      setCameraError(null);
+      setSimpleCaptureMode(false);
+      setEverReady(true);
+      return;
+    }
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setCameraReady(false);
+    setCameraLoading(true);
+    setCameraError(null);
+    try {
+      setSimpleCaptureMode(false);
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      streamRef.current = stream;
+      const [track] = stream.getVideoTracks();
+      if (track) {
+        track.onended = () => {
+          setCameraReady(false);
+          setCameraLoading(false);
+        };
+      }
+      if (videoRef.current) {
+        const video = videoRef.current;
+        video.srcObject = stream;
+        const markReady = () => {
           setCameraReady(true);
           setCameraLoading(false);
           setCameraError(null);
+          setSimpleCaptureMode(false);
+          setEverReady(true);
+          if (fallbackTimeoutRef.current) {
+            clearTimeout(fallbackTimeoutRef.current);
+            fallbackTimeoutRef.current = null;
+          }
+        };
+        video.onloadedmetadata = () => {
+          markReady();
+          void video.play().catch(() => {});
+        };
+        video.onloadeddata = markReady;
+        video.onerror = () => {
+          setCameraReady(false);
+          setCameraLoading(false);
+          setCameraError('카메라 미리보기를 불러오지 못했어요.');
+        };
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.then === 'function') {
+          playPromise.catch(() => {
+            /* autoplay restrictions */
+          });
         }
-      } catch (err) {
-        if (!mounted) return;
-        setCameraError('카메라 접근이 어렵습니다. 권한을 확인해주세요.');
-        setCameraLoading(false);
-        setCameraReady(false);
+        if (fallbackTimeoutRef.current) {
+          clearTimeout(fallbackTimeoutRef.current);
+          fallbackTimeoutRef.current = null;
+        }
+        fallbackTimeoutRef.current = setTimeout(() => {
+          if (!cameraReadyRef.current) {
+            setSimpleCaptureMode(true);
+            setCameraLoading(false);
+            setCameraError(null);
+          }
+        }, 4000);
+      }
+    } catch (err) {
+      setCameraError('카메라 접근이 어렵습니다. 권한을 확인해주세요.');
+      setCameraLoading(false);
+      setCameraReady(false);
+      setSimpleCaptureMode(true);
+    } finally {
+      startingRef.current = false;
+    }
+  }, [hasLiveStream]);
+
+  useEffect(() => {
+    startCamera();
+    const handleVisibility = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        (!hasLiveStream() || cameraErrorRef.current) &&
+        !startingRef.current
+      ) {
+        startCamera();
       }
     };
 
     enableCamera();
 
     return () => {
-      mounted = false;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = null;
+      }
+      startingRef.current = false;
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [hasLiveStream, startCamera]);
+
+  useEffect(() => {
+    cameraReadyRef.current = cameraReady;
+  }, [cameraReady]);
+
+  useEffect(() => {
+    cameraErrorRef.current = cameraError;
+  }, [cameraError]);
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -207,6 +294,57 @@ export const MissionUploadPage = () => {
             <p className="text-sm text-beach-navy/70">
               실시간 카메라로 쓰레기를 촬영하고 업로드해 주세요. 갤러리/인터넷 사진 재업로드는 허용되지 않습니다.
             </p>
+            <div className="relative overflow-hidden rounded-2xl border border-beach-sky bg-black">
+              <div className="relative aspect-[4/3] w-full text-white">
+                {!simpleCaptureMode && (
+                  <>
+                    <video
+                      ref={videoRef}
+                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                      playsInline
+                      muted
+                      autoPlay
+                    ></video>
+                    {(cameraLoading || !everReady) && !cameraError && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 px-6 text-center text-sm">
+                        <p>카메라 연결 중입니다...</p>
+                        <button
+                          type="button"
+                          onClick={startCamera}
+                          className="rounded-xl bg-white/90 px-4 py-2 text-xs font-semibold text-beach-navy"
+                        >
+                          다시 시도
+                        </button>
+                      </div>
+                    )}
+                    {cameraError && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 px-4 text-center text-sm text-white">
+                        <p>{cameraError}</p>
+                        <p className="mt-1 text-xs text-white/70">갤러리 업로드로 대체하거나 권한을 허용해주세요.</p>
+                      </div>
+                    )}
+                    {everReady && !cameraError && !cameraLoading && (
+                      <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-3 text-[11px] text-white/90 bg-gradient-to-t from-black/50 via-black/20 to-transparent">
+                        <p>프레임을 맞춘 뒤 '실시간 촬영'을 눌러주세요.</p>
+                      </div>
+                    )}
+                  </>
+                )}
+                {simpleCaptureMode && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black text-center text-sm text-white">
+                    <p className="text-base font-semibold">실시간 미리보기 없이 촬영</p>
+                    <p className="text-xs text-white/70">
+                      일부 기기에서 미리보기가 차단되었습니다. 촬영 버튼을 누르면 기본 카메라 UI가 열려 사진이 업로드됩니다.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => fileCaptureRef.current?.click()}
+                      className="rounded-xl bg-white/90 px-4 py-2 text-xs font-semibold text-beach-navy"
+                    >
+                      카메라 열기
+                    </button>
+                  </div>
+                )}
             <div className="relative overflow-hidden rounded-2xl border border-beach-sky bg-beach-navy/5">
               <div className="aspect-[4/3] w-full">
                 <video
@@ -239,7 +377,7 @@ export const MissionUploadPage = () => {
             <button
               type="button"
               onClick={handleCapture}
-              disabled={!cameraReady || uploading}
+              disabled={uploading || (!cameraReady && !simpleCaptureMode)}
               className="flex-1 rounded-2xl border border-transparent bg-gradient-to-r from-beach-sea via-beach-mint to-beach-sky px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-[1.05] disabled:brightness-[0.7] disabled:cursor-not-allowed"
             >
               {uploading ? '촬영 중...' : '실시간 촬영'}

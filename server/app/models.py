@@ -126,3 +126,40 @@ class BinScan(Base):
     festival = relationship("Festival", back_populates="bin_scans")
     bin = relationship("TrashBin", back_populates="scans")
     user = relationship("User", back_populates="bin_scans")
+
+
+class JackpotPool(Base):
+    __tablename__ = "jackpot_pools"
+
+    id = Column(String, primary_key=True, default=generate_id)
+    festival_id = Column(String, ForeignKey("festivals.id"), unique=True)
+    current_amount = Column(Integer, default=10000)
+    seed_amount = Column(Integer, default=10000)
+    contribution_rate = Column(Float, default=0.01)
+    last_winner_id = Column(String)
+    last_draw_date = Column(String)
+    updated_at = Column(DateTime, default=now)
+
+
+class JackpotEntry(Base):
+    __tablename__ = "jackpot_entries"
+
+    id = Column(String, primary_key=True, default=generate_id)
+    user_id = Column(String, ForeignKey("users.id"))
+    festival_id = Column(String, ForeignKey("festivals.id"))
+    week_key = Column(String)
+    entry_count = Column(Integer, default=1)
+    created_at = Column(DateTime, default=now)
+
+    __table_args__ = (UniqueConstraint("user_id", "festival_id", "week_key"),)
+
+
+class JackpotWinner(Base):
+    __tablename__ = "jackpot_winners"
+
+    id = Column(String, primary_key=True, default=generate_id)
+    user_id = Column(String, ForeignKey("users.id"))
+    festival_id = Column(String, ForeignKey("festivals.id"))
+    week_key = Column(String)
+    amount = Column(Integer)
+    created_at = Column(DateTime, default=now)
