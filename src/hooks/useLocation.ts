@@ -17,16 +17,9 @@ export const useLocation = () => {
       (pos) => {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLoading(false);
-        setError(null);
       },
-      (err) => {
-        const errorMsg =
-          err.code === err.PERMISSION_DENIED
-            ? 'HTTP 환경에서는 위치 권한이 차단됩니다. HTTPS로 접속하거나 위치 없이 촬영하세요.'
-            : err.code === err.TIMEOUT
-            ? '위치 정보 요청 시간이 초과되었습니다. 위치 없이 촬영하세요.'
-            : '위치 정보를 불러올 수 없습니다. 위치 없이 촬영하세요.';
-        setError(errorMsg);
+      () => {
+        setError('위치 정보를 불러오지 못했어요.');
         setLoading(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }

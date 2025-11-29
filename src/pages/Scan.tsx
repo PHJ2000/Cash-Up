@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -28,31 +28,23 @@ export const ScanPage = () => {
     setError(null);
     setMessage(null);
     try {
-        const res = await api.scanBin({
-          userId: user.id,
-          festivalId: festival.id,
-          binCode: binCode.trim(),
-          lat: coords?.lat,
-          lng: coords?.lng,
-          fallbackLat: festival.centerLat ?? undefined,
-          fallbackLng: festival.centerLng ?? undefined
-        });
-        setMessage(`공식 수거함 인증 완료! 지급 대기 ${res.activated}원 → 사용 가능 ${res.activated}원으로 전환되었습니다.`);
-        await refreshSummary();
-      } catch (err) {
-        const msg =
-          err instanceof Error && /404/.test(err.message)
-            ? '등록된 QR이 아니에요. 축제장에서 받은 공식 수거함 QR을 사용해 주세요.'
-            : err instanceof Error
-              ? err.message
-              : '인증에 실패했습니다.';
-        setError(msg);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const res = await api.scanBin({
+        userId: user.id,
+        festivalId: festival.id,
+        binCode: binCode.trim(),
+        lat: coords?.lat,
+        lng: coords?.lng
+      });
+      setMessage(`공식 수거함 인증 완료! 지급 대기 ${res.activated}원 → 사용 가능 ${res.activated}원으로 전환되었습니다.`);
+      await refreshSummary();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '인증에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const startScanner = useCallback(async () => {
+  const startScanner = async () => {
     if (!videoRef.current) return;
     if (!window.isSecureContext) {
       setScannerError('https 또는 localhost 환경에서만 카메라 접근이 가능합니다.');
@@ -105,7 +97,7 @@ export const ScanPage = () => {
       startingRef.current = false;
       setStarting(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     startScanner();
@@ -117,17 +109,7 @@ export const ScanPage = () => {
         scannerRef.current = null;
       }
     };
-  }, [startScanner]);
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible' && !startingRef.current && !scanningActive) {
-        startScanner();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [scanningActive, startScanner]);
+  }, []);
 
   return (
     <Layout title="QR / 코드 인증" showBack>

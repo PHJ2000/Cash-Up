@@ -1,11 +1,49 @@
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api';
+import { api, resolveImageUrl } from '../api';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Layout } from '../components/Layout';
 import { useLocation } from '../hooks/useLocation';
 import { useAppState } from '../state/AppStateContext';
+import { TrashPhoto } from '../types';
+
+type NormalizedDetection = {
+  className: string;
+  confidence: number;
+  bbox: [number, number, number, number];
+};
+
+type NormalizedDetectionSet = {
+  detections: NormalizedDetection[];
+  imageWidth: number | null;
+  imageHeight: number | null;
+};
+
+const normalizeDetections = (raw: TrashPhoto['yoloRaw']): NormalizedDetectionSet | null => {
+  if (!raw) return null;
+  const rawObj = Array.isArray(raw) ? { detections: raw } : raw;
+  const detections = rawObj.detections ?? rawObj.raw_detections ?? [];
+  const parsed = detections
+    .map((det) => {
+      const bbox = det.bbox ?? [];
+      if (!bbox || bbox.length !== 4) return null;
+      return {
+        className: det.className ?? (det as any).class_name ?? 'trash',
+        confidence: det.confidence ?? 0,
+        bbox: [bbox[0], bbox[1], bbox[2], bbox[3]] as [number, number, number, number],
+      };
+    })
+    .filter(Boolean) as NormalizedDetection[];
+  const width = rawObj.image_width ?? rawObj.imageWidth;
+  const height = rawObj.image_height ?? rawObj.imageHeight;
+  if (!parsed.length) return null;
+  return {
+    detections: parsed,
+    imageWidth: typeof width === 'number' ? width : null,
+    imageHeight: typeof height === 'number' ? height : null,
+  };
+};
 
 export const MissionUploadPage = () => {
   const navigate = useNavigate();
@@ -17,9 +55,6 @@ export const MissionUploadPage = () => {
   const [uploading, setUploading] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const startingRef = useRef(false);
-  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const fileCaptureRef = useRef<HTMLInputElement | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraLoading, setCameraLoading] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
@@ -32,8 +67,13 @@ export const MissionUploadPage = () => {
     () => streamRef.current?.getTracks().some((track) => track.readyState === 'live') ?? false,
     []
   );
+  const [trashCount, setTrashCount] = useState<number | null>(null);
+  const [maxConfidence, setMaxConfidence] = useState<number | null>(null);
+  const [normalizedDetections, setNormalizedDetections] = useState<NormalizedDetectionSet | null>(null);
+  const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
-  const startCamera = useCallback(async () => {
+  useEffect(() => {
+    let mounted = true;
     if (!window.isSecureContext) {
       setCameraError('https 또는 localhost 환경에서만 카메라를 사용할 수 있습니다.');
       setCameraLoading(false);
@@ -138,7 +178,9 @@ export const MissionUploadPage = () => {
         startCamera();
       }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
+
+    enableCamera();
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       if (fallbackTimeoutRef.current) {
@@ -162,6 +204,10 @@ export const MissionUploadPage = () => {
     async (file: File) => {
       if (!user || !festival) return;
       setPreview(URL.createObjectURL(file));
+      setTrashCount(null);
+      setMaxConfidence(null);
+      setNormalizedDetections(null);
+      setImageSize(null);
       setMessage(null);
       setError(null);
       setUploading(true);
@@ -171,11 +217,18 @@ export const MissionUploadPage = () => {
           festivalId: festival.id,
           file,
           lat: coords?.lat,
-          lng: coords?.lng,
-          fallbackLat: festival.centerLat ?? undefined,
-          fallbackLng: festival.centerLng ?? undefined
+          lng: coords?.lng
         });
+        const photo = res.photo;
         setMessage(res.message);
+        setPreview(resolveImageUrl(photo.imageUrl));
+        setTrashCount(photo.trashCount ?? null);
+        setMaxConfidence(photo.maxTrashConfidence ?? null);
+        const parsed = normalizeDetections(photo.yoloRaw);
+        setNormalizedDetections(parsed);
+        if (parsed?.imageWidth && parsed?.imageHeight) {
+          setImageSize({ width: parsed.imageWidth, height: parsed.imageHeight });
+        }
         await refreshSummary();
       } catch (err) {
         setError(err instanceof Error ? err.message : '업로드 중 문제가 발생했어요.');
@@ -213,12 +266,8 @@ export const MissionUploadPage = () => {
   };
 
   const handleCapture = async () => {
-    if (simpleCaptureMode) {
-      fileCaptureRef.current?.click();
-      return;
-    }
     if (!cameraReady || !videoRef.current) {
-      setError('카메라가 준비되지 않았어요. 다시 시도 또는 갤러리에서 선택을 이용해주세요.');
+      setError('카메라가 준비되지 않았어요.');
       return;
     }
     setError(null);
@@ -296,7 +345,32 @@ export const MissionUploadPage = () => {
                     </button>
                   </div>
                 )}
+            <div className="relative overflow-hidden rounded-2xl border border-beach-sky bg-beach-navy/5">
+              <div className="aspect-[4/3] w-full">
+                <video
+                  ref={videoRef}
+                  className="h-full w-full object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                ></video>
               </div>
+              {cameraLoading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/55 text-sm text-white">
+                  카메라 연결 중입니다...
+                </div>
+              )}
+              {cameraError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 px-4 text-center text-sm text-white">
+                  <p>{cameraError}</p>
+                  <p className="mt-1 text-xs text-white/70">갤러리 업로드로 대체하세요.</p>
+                </div>
+              )}
+              {!cameraLoading && !cameraError && (
+                <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-3 text-[11px] text-white/90">
+                  <p>화면을 정렬한 뒤 '실시간 촬영'을 눌러주세요.</p>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -312,32 +386,66 @@ export const MissionUploadPage = () => {
               <span className="text-sm font-semibold">갤러리에서 선택</span>
               <span className="text-xs text-beach-navy/60">단일 사진만 업로드 가능</span>
               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
-              <input
-                ref={fileCaptureRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleFileChange}
-              />
             </label>
           </div>
           <p className="text-xs text-beach-navy/60">같은 사진을 반복 업로드하거나 연속 촬영은 제한될 수 있어요.</p>
         </Card>
-        {locationError && (
-          <Card className="border border-amber-200 bg-amber-50">
-            <p className="text-xs text-amber-800">{locationError}</p>
-            <p className="text-xs text-amber-700 mt-1">위치 정보가 없어도 촬영은 가능합니다.</p>
-          </Card>
-        )}
-        {!locationError && (
-          <p className="text-xs text-beach-navy/60">{locationLoading ? '위치 확인 중...' : locationText}</p>
-        )}
+        {locationError && <p className="text-xs text-rose-600">{locationError}</p>}
+        <p className="text-xs text-beach-navy/60">{locationLoading ? '위치 확인 중...' : locationText}</p>
 
         {preview && (
           <Card className="space-y-2">
             <p className="text-sm text-beach-navy/70">업로드 미리보기</p>
-            <img src={preview} alt="preview" className="w-full rounded-xl object-cover shadow" />
+            <div className="relative">
+              <img
+                src={preview}
+                alt="preview"
+                className="w-full rounded-xl object-cover shadow"
+                onLoad={(e) => {
+                  const { naturalWidth, naturalHeight } = e.currentTarget;
+                  if (naturalWidth && naturalHeight) {
+                    setImageSize({ width: naturalWidth, height: naturalHeight });
+                  }
+                }}
+              />
+              {normalizedDetections && imageSize && (
+                <div className="pointer-events-none absolute inset-0">
+                  {normalizedDetections.detections.map((det, idx) => {
+                    const baseWidth = normalizedDetections.imageWidth || imageSize.width;
+                    const baseHeight = normalizedDetections.imageHeight || imageSize.height;
+                    if (!baseWidth || !baseHeight) return null;
+                    const [x1, y1, x2, y2] = det.bbox;
+                    const left = (x1 / baseWidth) * 100;
+                    const top = (y1 / baseHeight) * 100;
+                    const width = ((x2 - x1) / baseWidth) * 100;
+                    const height = ((y2 - y1) / baseHeight) * 100;
+                    return (
+                      <div
+                        key={`${det.className}-${idx}`}
+                        className="absolute rounded-lg border-2 border-emerald-400/90 bg-emerald-400/10 text-[10px] font-semibold text-white shadow-lg"
+                        style={{
+                          left: `${left}%`,
+                          top: `${top}%`,
+                          width: `${width}%`,
+                          height: `${height}%`,
+                          backdropFilter: 'blur(1px)',
+                        }}
+                      >
+                        <div className="absolute left-0 top-0 m-0.5 rounded bg-emerald-500/90 px-1 py-[1px]">
+                          {det.className} {(det.confidence * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-beach-navy/70">
+              감지된 쓰레기: {trashCount ?? '—'}개{' '}
+              {typeof maxConfidence === 'number' && (
+                <span className="text-[11px] text-beach-navy/60">(최대 신뢰도 {(maxConfidence * 100).toFixed(0)}%)</span>
+              )}
+            </div>
           </Card>
         )}
 

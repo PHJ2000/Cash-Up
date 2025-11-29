@@ -1,6 +1,6 @@
 import { AuthSession, Coupon, Festival, Shop, Summary, TrashBin, TrashPhoto, User } from './types';
 
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+export const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const API_ORIGIN = API_BASE.replace(/\/api$/, '');
 export const resolveImageUrl = (path: string) => (path.startsWith('http') ? path : `${API_ORIGIN}${path}`);
 
@@ -41,6 +41,11 @@ export const api = {
     return data.festivals;
   },
 
+  async getFestival(festivalId: string): Promise<{ festival: Festival; bins: TrashBin[] }> {
+    const res = await fetch(`${API_BASE}/festivals/${festivalId}`);
+    return handle(res);
+  },
+
   async getSummary(userId: string, festivalId: string): Promise<{ festival: Festival; summary: Summary }> {
     const res = await fetch(`${API_BASE}/users/${userId}/summary?festivalId=${festivalId}`, {
       headers: withAuth()
@@ -62,15 +67,11 @@ export const api = {
     file: File;
     lat?: number;
     lng?: number;
-    fallbackLat?: number;
-    fallbackLng?: number;
   }) {
     const form = new FormData();
     form.append('userId', params.userId);
-    const lat = params.lat ?? params.fallbackLat;
-    const lng = params.lng ?? params.fallbackLng;
-    if (lat !== undefined) form.append('lat', String(lat));
-    if (lng !== undefined) form.append('lng', String(lng));
+    if (params.lat !== undefined) form.append('lat', String(params.lat));
+    if (params.lng !== undefined) form.append('lng', String(params.lng));
     form.append('image', params.file);
     const res = await fetch(`${API_BASE}/festivals/${params.festivalId}/trash-photos`, {
       method: 'POST',
@@ -90,23 +91,11 @@ export const api = {
     return data.bins;
   },
 
-  async scanBin(params: {
-    userId: string;
-    festivalId: string;
-    binCode: string;
-    lat?: number;
-    lng?: number;
-    fallbackLat?: number;
-    fallbackLng?: number;
-  }) {
+  async scanBin(params: { userId: string; festivalId: string; binCode: string; lat?: number; lng?: number }) {
     const res = await fetch(`${API_BASE}/festivals/${params.festivalId}/trash-bins/scan`, {
       method: 'POST',
       headers: withAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({
-        ...params,
-        lat: params.lat ?? params.fallbackLat,
-        lng: params.lng ?? params.fallbackLng
-      })
+      body: JSON.stringify(params)
     });
     return handle<{
       activated: number;
