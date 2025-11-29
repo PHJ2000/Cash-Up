@@ -179,5 +179,14 @@ export const api = {
       budgetRemaining: number;
       binUsage: { binId: string; code?: string; count: number }[];
     }>(res);
+  },
+
+  async getJackpot(festivalId: string): Promise<{
+    current_amount: number;
+    last_winner_name: string | null;
+    last_draw_date?: string | null;
+  }> {
+    const res = await fetch(`${API_BASE}/festivals/${festivalId}/jackpot`);
+    return handle(res);
   }
 };

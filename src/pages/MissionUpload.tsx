@@ -25,6 +25,13 @@ export const MissionUploadPage = () => {
   const [cameraReady, setCameraReady] = useState(false);
   const [simpleCaptureMode, setSimpleCaptureMode] = useState(false);
   const [everReady, setEverReady] = useState(false);
+  const cameraReadyRef = useRef(false);
+  const cameraErrorRef = useRef<string | null>(null);
+
+  const hasLiveStream = useCallback(
+    () => streamRef.current?.getTracks().some((track) => track.readyState === 'live') ?? false,
+    []
+  );
 
   const startCamera = useCallback(async () => {
     if (!window.isSecureContext) {
@@ -35,6 +42,18 @@ export const MissionUploadPage = () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError('브라우저가 카메라를 지원하지 않아요.');
       setCameraLoading(false);
+      return;
+    }
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
+    }
+    if (hasLiveStream() && !cameraErrorRef.current) {
+      setCameraReady(true);
+      setCameraLoading(false);
+      setCameraError(null);
+      setSimpleCaptureMode(false);
+      setEverReady(true);
       return;
     }
     if (startingRef.current) return;
@@ -65,7 +84,10 @@ export const MissionUploadPage = () => {
           setCameraError(null);
           setSimpleCaptureMode(false);
           setEverReady(true);
-          if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+          if (fallbackTimeoutRef.current) {
+            clearTimeout(fallbackTimeoutRef.current);
+            fallbackTimeoutRef.current = null;
+          }
         };
         video.onloadedmetadata = () => {
           markReady();
@@ -83,9 +105,12 @@ export const MissionUploadPage = () => {
             /* autoplay restrictions */
           });
         }
-        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+        if (fallbackTimeoutRef.current) {
+          clearTimeout(fallbackTimeoutRef.current);
+          fallbackTimeoutRef.current = null;
+        }
         fallbackTimeoutRef.current = setTimeout(() => {
-          if (!cameraReady) {
+          if (!cameraReadyRef.current) {
             setSimpleCaptureMode(true);
             setCameraLoading(false);
             setCameraError(null);
@@ -100,23 +125,38 @@ export const MissionUploadPage = () => {
     } finally {
       startingRef.current = false;
     }
-  }, []);
+  }, [hasLiveStream]);
 
   useEffect(() => {
     startCamera();
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && !cameraReady && !cameraLoading) {
+      if (
+        document.visibilityState === 'visible' &&
+        (!hasLiveStream() || cameraErrorRef.current) &&
+        !startingRef.current
+      ) {
         startCamera();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
-      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = null;
+      }
       startingRef.current = false;
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [cameraLoading, cameraReady, startCamera]);
+  }, [hasLiveStream, startCamera]);
+
+  useEffect(() => {
+    cameraReadyRef.current = cameraReady;
+  }, [cameraReady]);
+
+  useEffect(() => {
+    cameraErrorRef.current = cameraError;
+  }, [cameraError]);
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -216,7 +256,7 @@ export const MissionUploadPage = () => {
                       muted
                       autoPlay
                     ></video>
-                    {!everReady && (
+                    {(cameraLoading || !everReady) && !cameraError && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 px-6 text-center text-sm">
                         <p>카메라 연결 중입니다...</p>
                         <button
@@ -234,7 +274,7 @@ export const MissionUploadPage = () => {
                         <p className="mt-1 text-xs text-white/70">갤러리 업로드로 대체하거나 권한을 허용해주세요.</p>
                       </div>
                     )}
-                    {everReady && !cameraError && (
+                    {everReady && !cameraError && !cameraLoading && (
                       <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-3 text-[11px] text-white/90 bg-gradient-to-t from-black/50 via-black/20 to-transparent">
                         <p>프레임을 맞춘 뒤 '실시간 촬영'을 눌러주세요.</p>
                       </div>
@@ -263,7 +303,7 @@ export const MissionUploadPage = () => {
             <button
               type="button"
               onClick={handleCapture}
-              disabled={!cameraReady || uploading}
+              disabled={uploading || (!cameraReady && !simpleCaptureMode)}
               className="flex-1 rounded-2xl border border-transparent bg-gradient-to-r from-beach-sea via-beach-mint to-beach-sky px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-[1.05] disabled:brightness-[0.7] disabled:cursor-not-allowed"
             >
               {uploading ? '촬영 중...' : '실시간 촬영'}

@@ -7,9 +7,10 @@ import shutil
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 from zoneinfo import ZoneInfo
 
+import logging
 import random
 import imagehash
 from dotenv import load_dotenv
@@ -35,7 +36,17 @@ from .models import (
     UserDailySummary,
 )
 
-load_dotenv()
+ROOT_ENV = BASE_DIR.parent / ".env"
+# Load root-level .env first (project/.env), then server/.env if present.
+load_dotenv(dotenv_path=ROOT_ENV)
+load_dotenv(dotenv_path=BASE_DIR / ".env")
+logger = logging.getLogger("cashup")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("[%(levelname)s] %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 PHOTO_STATUS_PENDING = "PENDING"
 PHOTO_STATUS_ACTIVE = "ACTIVE"
@@ -46,6 +57,14 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "admin123")
 DEFAULT_FESTIVAL_ID = os.getenv("FESTIVAL_ID")
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
+
+DEMO_JACKPOT_USER = os.getenv("DEMO_JACKPOT_USER")
+DEMO_JACKPOT_FESTIVAL_ID = os.getenv("DEMO_JACKPOT_FESTIVAL_ID") or DEFAULT_FESTIVAL_ID
+DEMO_JACKPOT_TARGET = int(os.getenv("DEMO_JACKPOT_TARGET", "100000"))
+DEMO_JACKPOT_START_PERCENT = float(os.getenv("DEMO_JACKPOT_START_PERCENT", "0.78"))
+DEMO_JACKPOT_TRIGGER_PHOTOS = int(os.getenv("DEMO_JACKPOT_TRIGGER_PHOTOS", "2"))
+DEMO_JACKPOT_SEED = int(os.getenv("DEMO_JACKPOT_SEED", "10000"))
+DEMO_JACKPOT_CONTRIBUTION_RATE = float(os.getenv("DEMO_JACKPOT_CONTRIBUTION_RATE", "1.0"))
 
 KST = ZoneInfo("Asia/Seoul")
 PENDING_ACTIVATION_MINUTES = 30
@@ -269,6 +288,138 @@ def serialize_coupon(coupon: Coupon):
     }
 
 
+def demo_jackpot_enabled() -> bool:
+    return bool(DEMO_JACKPOT_USER and DEMO_JACKPOT_FESTIVAL_ID)
+
+
+def is_demo_jackpot_user(user: Optional[User]) -> bool:
+    if not (demo_jackpot_enabled() and user and user.display_name):
+        return False
+    return user.display_name.strip().lower() == DEMO_JACKPOT_USER.strip().lower()
+
+
+def demo_week_key(now_kst: Optional[datetime] = None) -> Tuple[datetime, str]:
+    current = now_kst or datetime.now(KST)
+    return current, f"{current.year}-W{current.isocalendar()[1]:02d}"
+
+
+def ensure_jackpot_pool(db: Session, festival: Festival, user: Optional[User] = None) -> JackpotPool:
+    """Create or normalize a jackpot pool so uploads don't rely on mock-login side effects."""
+    pool = db.execute(select(JackpotPool).where(JackpotPool.festival_id == festival.id)).scalar_one_or_none()
+    if not pool:
+        pool = JackpotPool(festival_id=festival.id)
+        db.add(pool)
+        db.flush()
+
+    # Align seed/contribution with env overrides for the demo festival.
+    if DEMO_JACKPOT_FESTIVAL_ID and festival.id == DEMO_JACKPOT_FESTIVAL_ID:
+        pool.seed_amount = DEMO_JACKPOT_SEED
+        pool.contribution_rate = DEMO_JACKPOT_CONTRIBUTION_RATE
+        target_amount = max(DEMO_JACKPOT_SEED, int(DEMO_JACKPOT_TARGET * DEMO_JACKPOT_START_PERCENT))
+        # Prime only before 첫 당첨(=last_draw_date가 비어 있을 때).
+        if pool.last_draw_date is None and pool.current_amount < target_amount:
+            pool.current_amount = target_amount
+            pool.last_winner_id = None
+            pool.last_draw_date = None
+            logger.info(
+                "Jackpot pool primed: festival=%s amount=%s seed=%s rate=%s user=%s target=%s",
+                festival.id,
+                pool.current_amount,
+                pool.seed_amount,
+                pool.contribution_rate,
+                user.id if user else None,
+                target_amount,
+            )
+        else:
+            logger.info(
+                "Jackpot pool state: festival=%s amount=%s seed=%s rate=%s user=%s target=%s last_draw=%s",
+                festival.id,
+                pool.current_amount,
+                pool.seed_amount,
+                pool.contribution_rate,
+                user.id if user else None,
+                target_amount,
+                pool.last_draw_date,
+            )
+    return pool
+
+
+def prime_demo_jackpot_state(db: Session, user: User):
+    if not (is_demo_jackpot_user(user) and DEMO_JACKPOT_FESTIVAL_ID):
+        return
+    festival = db.get(Festival, DEMO_JACKPOT_FESTIVAL_ID)
+    if not festival:
+        return
+    pool = ensure_jackpot_pool(db, festival, user)
+    target_amount = max(DEMO_JACKPOT_SEED, int(DEMO_JACKPOT_TARGET * DEMO_JACKPOT_START_PERCENT))
+    if pool.last_draw_date is None and pool.current_amount < target_amount:
+        pool.current_amount = target_amount
+        pool.last_winner_id = None
+        pool.last_draw_date = None
+    now_kst, week_key = demo_week_key()
+    entry = (
+        db.execute(
+            select(JackpotEntry).where(
+                JackpotEntry.user_id == user.id,
+                JackpotEntry.festival_id == festival.id,
+                JackpotEntry.week_key == week_key,
+            )
+        ).scalar_one_or_none()
+    )
+    if not entry:
+        db.add(JackpotEntry(user_id=user.id, festival_id=festival.id, week_key=week_key, entry_count=1))
+    else:
+        entry.entry_count = max(entry.entry_count, 1)
+    db.flush()
+
+
+def maybe_trigger_demo_jackpot_win(db: Session, user: User, festival: Festival, summary: UserDailySummary):
+    if not (is_demo_jackpot_user(user) and festival.id == DEMO_JACKPOT_FESTIVAL_ID):
+        return
+    pool = db.execute(select(JackpotPool).where(JackpotPool.festival_id == festival.id)).scalar_one_or_none()
+    if not pool or pool.current_amount <= pool.seed_amount:
+        return
+    today = get_today()
+    if pool.last_draw_date == today:
+        return
+    photo_count = (
+        db.execute(
+            select(func.count(TrashPhoto.id)).where(
+                TrashPhoto.user_id == user.id,
+                TrashPhoto.festival_id == festival.id,
+            )
+        ).scalar_one()
+    )
+    if photo_count < DEMO_JACKPOT_TRIGGER_PHOTOS:
+        return
+    now_kst, week_key = demo_week_key()
+    existing = (
+        db.execute(
+            select(JackpotWinner).where(
+                JackpotWinner.festival_id == festival.id,
+                JackpotWinner.week_key == week_key,
+                JackpotWinner.user_id == user.id,
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if existing:
+        return
+    summary.total_active = (summary.total_active or 0) + pool.current_amount
+    winner_record = JackpotWinner(
+        user_id=user.id,
+        festival_id=festival.id,
+        week_key=week_key,
+        amount=pool.current_amount,
+    )
+    db.add(winner_record)
+    pool.last_winner_id = user.id
+    pool.last_draw_date = today
+    pool.current_amount = 0
+    db.flush()
+
+
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
@@ -293,6 +444,7 @@ def mock_login(payload: dict, db: Session = Depends(get_db_dep)):
     db.add(user)
     db.flush()
     db.refresh(user)
+    prime_demo_jackpot_state(db, user)
     token = create_token(user.id)
     return {"user": {"id": user.id, "displayName": user.display_name}, "token": token}
 
@@ -403,6 +555,10 @@ def upload_photo(
     if not festival:
         http_error(404, "축제를 찾을 수 없습니다.")
 
+    # 로그인 경로가 달라져도 잭팟 설정이 적용되도록 보정
+    ensure_jackpot_pool(db, festival, user)
+    prime_demo_jackpot_state(db, user)
+
     latitude = float(lat) if lat is not None else None
     longitude = float(lng) if lng is not None else None
     if not is_inside_festival(festival, latitude, longitude):
@@ -482,16 +638,20 @@ def upload_photo(
     db.refresh(summary)
 
     # 잭팟 풀 업데이트 및 참가 등록
-    jackpot_pool = (
-        db.execute(select(JackpotPool).where(JackpotPool.festival_id == festival_id)).scalar_one_or_none()
-    )
-    if not jackpot_pool:
-        jackpot_pool = JackpotPool(festival_id=festival_id)
-        db.add(jackpot_pool)
-        db.flush()
-
+    jackpot_pool = ensure_jackpot_pool(db, festival, user)
+    before_amount = jackpot_pool.current_amount
     contribution = int(festival.per_photo_point * jackpot_pool.contribution_rate)
     jackpot_pool.current_amount += contribution
+    logger.info(
+        "Jackpot contribution added: festival=%s user=%s photo=%s added=%s current=%s (before=%s, rate=%s)",
+        festival.id,
+        user.id,
+        photo.id,
+        contribution,
+        jackpot_pool.current_amount,
+        before_amount,
+        jackpot_pool.contribution_rate,
+    )
 
     now_kst = datetime.now(KST)
     week_key = f"{now_kst.year}-W{now_kst.isocalendar()[1]:02d}"
@@ -515,6 +675,7 @@ def upload_photo(
             )
         )
     db.flush()
+    maybe_trigger_demo_jackpot_win(db, user, festival, summary)
 
     return {
         "photo": serialize_photo(photo),
@@ -850,7 +1011,11 @@ def admin_summary(
 
 @app.get("/api/festivals/{festival_id}/jackpot")
 def get_jackpot(festival_id: str, db: Session = Depends(get_db_dep)):
-    pool = db.execute(select(JackpotPool).where(JackpotPool.festival_id == festival_id)).scalar_one_or_none()
+    festival = db.get(Festival, festival_id)
+    if not festival:
+        http_error(404, "축제를 찾을 수 없습니다.")
+    pool = ensure_jackpot_pool(db, festival)
+    db.flush()
     if not pool:
         return {"current_amount": 0, "last_winner_name": None}
 
@@ -859,6 +1024,16 @@ def get_jackpot(festival_id: str, db: Session = Depends(get_db_dep)):
         winner = db.get(User, pool.last_winner_id)
         if winner:
             last_winner_name = winner.display_name
+
+    logger.info(
+        "Jackpot get: festival=%s amount=%s seed=%s rate=%s last_winner=%s last_date=%s",
+        festival.id,
+        pool.current_amount,
+        pool.seed_amount,
+        pool.contribution_rate,
+        pool.last_winner_id,
+        pool.last_draw_date,
+    )
 
     return {
         "current_amount": pool.current_amount,
@@ -916,7 +1091,7 @@ def draw_jackpot(
         summary = UserDailySummary(user_id=winner_id, festival_id=festival_id, date=today)
         db.add(summary)
 
-    summary.total_active += pool.current_amount
+    summary.total_active = (summary.total_active or 0) + pool.current_amount
 
     winner_record = JackpotWinner(
         user_id=winner_id,
@@ -927,7 +1102,7 @@ def draw_jackpot(
     db.add(winner_record)
 
     awarded_amount = pool.current_amount
-    pool.current_amount = pool.seed_amount
+    pool.current_amount = 0
     pool.last_winner_id = winner_id
     pool.last_draw_date = today
 
