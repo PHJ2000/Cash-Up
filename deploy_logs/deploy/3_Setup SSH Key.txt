@@ -1,0 +1,18 @@
+﻿2025-11-28T12:18:22.9406251Z ##[group]Run echo "🔑 Setting up SSH key..."
+2025-11-28T12:18:22.9407378Z [36;1mecho "🔑 Setting up SSH key..."[0m
+2025-11-28T12:18:22.9408303Z [36;1mmkdir -p ~/.ssh[0m
+2025-11-28T12:18:22.9409062Z [36;1mecho "" > ~/.ssh/id_rsa[0m
+2025-11-28T12:18:22.9409868Z [36;1mchmod 600 ~/.ssh/id_rsa[0m
+2025-11-28T12:18:22.9411101Z [36;1mecho "📡 Scanning SSH host keys for ***..."[0m
+2025-11-28T12:18:22.9412684Z [36;1mssh-keyscan -H *** >> ~/.ssh/known_hosts[0m
+2025-11-28T12:18:22.9413692Z [36;1mecho "✅ SSH key setup completed"[0m
+2025-11-28T12:18:22.9450202Z shell: /usr/bin/bash -e {0}
+2025-11-28T12:18:22.9451007Z ##[endgroup]
+2025-11-28T12:18:22.9527605Z 🔑 Setting up SSH key...
+2025-11-28T12:18:22.9551826Z 📡 Scanning SSH host keys for ***...
+2025-11-28T12:18:23.3414003Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:23.5108715Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:23.6831925Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:24.2539659Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:24.8318663Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:25.4052859Z ✅ SSH key setup completed

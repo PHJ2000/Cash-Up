@@ -14,6 +14,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // Serve uploaded images from the backend during local dev to avoid broken previews
+      '/uploads': {
+        target: 'http://127.0.0.1:4000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });

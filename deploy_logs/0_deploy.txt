@@ -1,0 +1,269 @@
+﻿2025-11-28T12:18:20.8906284Z Current runner version: '2.329.0'
+2025-11-28T12:18:20.8933008Z ##[group]Runner Image Provisioner
+2025-11-28T12:18:20.8934012Z Hosted Compute Agent
+2025-11-28T12:18:20.8934874Z Version: 20251016.436
+2025-11-28T12:18:20.8935701Z Commit: 8ab8ac8bfd662a3739dab9fe09456aba92132568
+2025-11-28T12:18:20.8936710Z Build Date: 2025-10-15T20:44:12Z
+2025-11-28T12:18:20.8937512Z ##[endgroup]
+2025-11-28T12:18:20.8938290Z ##[group]Operating System
+2025-11-28T12:18:20.8939065Z Ubuntu
+2025-11-28T12:18:20.8939849Z 24.04.3
+2025-11-28T12:18:20.8940473Z LTS
+2025-11-28T12:18:20.8941176Z ##[endgroup]
+2025-11-28T12:18:20.8942145Z ##[group]Runner Image
+2025-11-28T12:18:20.8943445Z Image: ***-24.04
+2025-11-28T12:18:20.8944233Z Version: 20251112.124.1
+2025-11-28T12:18:20.8945571Z Included Software: https://github.com/actions/runner-images/blob/***24/20251112.124/images/***/Ubuntu2404-Readme.md
+2025-11-28T12:18:20.8947401Z Image Release: https://github.com/actions/runner-images/releases/tag/***24%2F20251112.124
+2025-11-28T12:18:20.8948682Z ##[endgroup]
+2025-11-28T12:18:20.8950201Z ##[group]GITHUB_TOKEN Permissions
+2025-11-28T12:18:20.8952671Z Contents: read
+2025-11-28T12:18:20.8953530Z Metadata: read
+2025-11-28T12:18:20.8954228Z Packages: read
+2025-11-28T12:18:20.8954983Z ##[endgroup]
+2025-11-28T12:18:20.8957485Z Secret source: Actions
+2025-11-28T12:18:20.8958663Z Prepare workflow directory
+2025-11-28T12:18:20.9283771Z Prepare all required actions
+2025-11-28T12:18:20.9324198Z Getting action download info
+2025-11-28T12:18:21.2206821Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2025-11-28T12:18:21.6795233Z Complete job name: deploy
+2025-11-28T12:18:21.7589904Z ##[group]Run actions/checkout@v4
+2025-11-28T12:18:21.7590904Z with:
+2025-11-28T12:18:21.7591940Z   repository: PHJ2000/Cash-Up
+2025-11-28T12:18:21.7592842Z   token: ***
+2025-11-28T12:18:21.7593406Z   ssh-strict: true
+2025-11-28T12:18:21.7593986Z   ssh-user: git
+2025-11-28T12:18:21.7594585Z   persist-credentials: true
+2025-11-28T12:18:21.7595220Z   clean: true
+2025-11-28T12:18:21.7595802Z   sparse-checkout-cone-mode: true
+2025-11-28T12:18:21.7596463Z   fetch-depth: 1
+2025-11-28T12:18:21.7597016Z   fetch-tags: false
+2025-11-28T12:18:21.7597593Z   show-progress: true
+2025-11-28T12:18:21.7598171Z   lfs: false
+2025-11-28T12:18:21.7598724Z   submodules: false
+2025-11-28T12:18:21.7599313Z   set-safe-directory: true
+2025-11-28T12:18:21.7600258Z ##[endgroup]
+2025-11-28T12:18:21.8698900Z Syncing repository: PHJ2000/Cash-Up
+2025-11-28T12:18:21.8700819Z ##[group]Getting Git version info
+2025-11-28T12:18:21.8701919Z Working directory is '/home/runner/work/Cash-Up/Cash-Up'
+2025-11-28T12:18:21.8703212Z [command]/usr/bin/git version
+2025-11-28T12:18:22.1405536Z git version 2.51.2
+2025-11-28T12:18:22.1433429Z ##[endgroup]
+2025-11-28T12:18:22.1447894Z Temporarily overriding HOME='/home/runner/work/_temp/1efdd701-42b9-407e-a309-5c12ec506499' before making global git config changes
+2025-11-28T12:18:22.1450161Z Adding repository directory to the temporary git global config as a safe directory
+2025-11-28T12:18:22.1460955Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Cash-Up/Cash-Up
+2025-11-28T12:18:22.1499234Z Deleting the contents of '/home/runner/work/Cash-Up/Cash-Up'
+2025-11-28T12:18:22.1503241Z ##[group]Initializing the repository
+2025-11-28T12:18:22.1506880Z [command]/usr/bin/git init /home/runner/work/Cash-Up/Cash-Up
+2025-11-28T12:18:22.1614196Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-11-28T12:18:22.1616488Z hint: is subject to change. To configure the initial branch name to use in all
+2025-11-28T12:18:22.1618355Z hint: of your new repositories, which will suppress this warning, call:
+2025-11-28T12:18:22.1619821Z hint:
+2025-11-28T12:18:22.1620885Z hint: 	git config --global init.defaultBranch <name>
+2025-11-28T12:18:22.1622384Z hint:
+2025-11-28T12:18:22.1623708Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-11-28T12:18:22.1625559Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-11-28T12:18:22.1627467Z hint:
+2025-11-28T12:18:22.1628456Z hint: 	git branch -m <name>
+2025-11-28T12:18:22.1629474Z hint:
+2025-11-28T12:18:22.1630769Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2025-11-28T12:18:22.1633065Z Initialized empty Git repository in /home/runner/work/Cash-Up/Cash-Up/.git/
+2025-11-28T12:18:22.1636289Z [command]/usr/bin/git remote add origin https://github.com/PHJ2000/Cash-Up
+2025-11-28T12:18:22.1665971Z ##[endgroup]
+2025-11-28T12:18:22.1667606Z ##[group]Disabling automatic garbage collection
+2025-11-28T12:18:22.1669332Z [command]/usr/bin/git config --local gc.auto 0
+2025-11-28T12:18:22.1699972Z ##[endgroup]
+2025-11-28T12:18:22.1700873Z ##[group]Setting up auth
+2025-11-28T12:18:22.1706685Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-11-28T12:18:22.1736564Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-11-28T12:18:22.2060094Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-11-28T12:18:22.2089779Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-11-28T12:18:22.2306602Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2025-11-28T12:18:22.2336576Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2025-11-28T12:18:22.2597130Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-11-28T12:18:22.2632134Z ##[endgroup]
+2025-11-28T12:18:22.2633784Z ##[group]Fetching the repository
+2025-11-28T12:18:22.2641990Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +406d88ceba0d397fd4c4f1355d2b20fced656c80:refs/remotes/origin/main
+2025-11-28T12:18:22.8532316Z From https://github.com/PHJ2000/Cash-Up
+2025-11-28T12:18:22.8537593Z  * [new ref]         406d88ceba0d397fd4c4f1355d2b20fced656c80 -> origin/main
+2025-11-28T12:18:22.8568814Z ##[endgroup]
+2025-11-28T12:18:22.8570574Z ##[group]Determining the checkout info
+2025-11-28T12:18:22.8572656Z ##[endgroup]
+2025-11-28T12:18:22.8577347Z [command]/usr/bin/git sparse-checkout disable
+2025-11-28T12:18:22.8620145Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-11-28T12:18:22.8648979Z ##[group]Checking out the ref
+2025-11-28T12:18:22.8653243Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2025-11-28T12:18:22.9108508Z Switched to a new branch 'main'
+2025-11-28T12:18:22.9109881Z branch 'main' set up to track 'origin/main'.
+2025-11-28T12:18:22.9117293Z ##[endgroup]
+2025-11-28T12:18:22.9154435Z [command]/usr/bin/git log -1 --format=%H
+2025-11-28T12:18:22.9176899Z 406d88ceba0d397fd4c4f1355d2b20fced656c80
+2025-11-28T12:18:22.9406293Z ##[group]Run echo "🔑 Setting up SSH key..."
+2025-11-28T12:18:22.9407385Z [36;1mecho "🔑 Setting up SSH key..."[0m
+2025-11-28T12:18:22.9408308Z [36;1mmkdir -p ~/.ssh[0m
+2025-11-28T12:18:22.9409066Z [36;1mecho "" > ~/.ssh/id_rsa[0m
+2025-11-28T12:18:22.9409871Z [36;1mchmod 600 ~/.ssh/id_rsa[0m
+2025-11-28T12:18:22.9411110Z [36;1mecho "📡 Scanning SSH host keys for ***..."[0m
+2025-11-28T12:18:22.9412695Z [36;1mssh-keyscan -H *** >> ~/.ssh/known_hosts[0m
+2025-11-28T12:18:22.9413703Z [36;1mecho "✅ SSH key setup completed"[0m
+2025-11-28T12:18:22.9450227Z shell: /usr/bin/bash -e {0}
+2025-11-28T12:18:22.9451014Z ##[endgroup]
+2025-11-28T12:18:22.9527634Z 🔑 Setting up SSH key...
+2025-11-28T12:18:22.9551853Z 📡 Scanning SSH host keys for ***...
+2025-11-28T12:18:23.3414055Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:23.5108744Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:23.6831970Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:24.2539866Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:24.8318716Z # ***:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:25.4052918Z ✅ SSH key setup completed
+2025-11-28T12:18:25.4096438Z ##[group]Run echo "📤 Copying .env.production to server..."
+2025-11-28T12:18:25.4097002Z [36;1mecho "📤 Copying .env.production to server..."[0m
+2025-11-28T12:18:25.4097444Z [36;1mif [ ! -f .env.production ]; then[0m
+2025-11-28T12:18:25.4097874Z [36;1m  echo "❌ Error: .env.production file not found"[0m
+2025-11-28T12:18:25.4098277Z [36;1m  exit 1[0m
+2025-11-28T12:18:25.4098566Z [36;1mfi[0m
+2025-11-28T12:18:25.4099113Z [36;1mscp -v -i ~/.ssh/id_rsa .env.production ***@***:/tmp/ || {[0m
+2025-11-28T12:18:25.4099589Z [36;1m  echo "❌ Failed to copy .env.production file"[0m
+2025-11-28T12:18:25.4099971Z [36;1m  exit 1[0m
+2025-11-28T12:18:25.4100293Z [36;1m}[0m
+2025-11-28T12:18:25.4100629Z [36;1mecho "✅ Environment file copied successfully"[0m
+2025-11-28T12:18:25.4135849Z shell: /usr/bin/bash -e {0}
+2025-11-28T12:18:25.4136226Z ##[endgroup]
+2025-11-28T12:18:25.4189291Z 📤 Copying .env.production to server...
+2025-11-28T12:18:25.4592074Z Executing: program /usr/bin/ssh host ***, user ***, command sftp
+2025-11-28T12:18:25.4899375Z OpenSSH_9.6p1 Ubuntu-3***13.14, OpenSSL 3.0.13 30 Jan 2024
+2025-11-28T12:18:25.4900092Z debug1: Reading configuration data /etc/ssh/ssh_config
+2025-11-28T12:18:25.4905468Z debug1: /etc/ssh/ssh_config line 19: include /etc/ssh/ssh_config.d/*.conf matched no files
+2025-11-28T12:18:25.4906330Z debug1: /etc/ssh/ssh_config line 21: Applying options for *
+2025-11-28T12:18:25.4934813Z debug1: Connecting to *** [***] port 22.
+2025-11-28T12:18:25.6678681Z debug1: Connection established.
+2025-11-28T12:18:25.6679757Z debug1: identity file /home/runner/.ssh/id_rsa type -1
+2025-11-28T12:18:25.6680458Z debug1: identity file /home/runner/.ssh/id_rsa-cert type -1
+2025-11-28T12:18:25.6681803Z debug1: Local version string SSH-2.0-OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:25.8512445Z debug1: Remote protocol version 2.0, remote software version OpenSSH_9.6p1 Ubuntu-3***13.14
+2025-11-28T12:18:25.8513929Z debug1: compat_banner: match: OpenSSH_9.6p1 Ubuntu-3***13.14 pat OpenSSH* compat 0x04000000
+2025-11-28T12:18:25.8514870Z debug1: Authenticating to ***:22 as '***'
+2025-11-28T12:18:25.8515488Z debug1: load_hostkeys: fopen /home/runner/.ssh/known_hosts2: No such file or directory
+2025-11-28T12:18:25.8555744Z debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+2025-11-28T12:18:25.8556400Z debug1: SSH2_MSG_KEXINIT sent
+2025-11-28T12:18:26.0255711Z debug1: SSH2_MSG_KEXINIT received
+2025-11-28T12:18:26.0256823Z debug1: kex: algorithm: sntrup761x25519-sha512@openssh.com
+2025-11-28T12:18:26.0257876Z debug1: kex: host key algorithm: ssh-ed25519
+2025-11-28T12:18:26.0259326Z debug1: kex: server->client cipher: chacha20-poly1305@openssh.com MAC: <implicit> compression: none
+2025-11-28T12:18:26.0261457Z debug1: kex: client->server cipher: chacha20-poly1305@openssh.com MAC: <implicit> compression: none
+2025-11-28T12:18:26.0819138Z debug1: expecting SSH2_MSG_KEX_ECDH_REPLY
+2025-11-28T12:18:26.2703996Z debug1: SSH2_MSG_KEX_ECDH_REPLY received
+2025-11-28T12:18:26.2705306Z debug1: Server host key: ssh-ed25519 SHA256:DRDWcwWSRxoYIvge6VNWCzwS5FzJG/3f9Gr7B2ptJAU
+2025-11-28T12:18:26.2708589Z debug1: load_hostkeys: fopen /home/runner/.ssh/known_hosts2: No such file or directory
+2025-11-28T12:18:26.2710030Z debug1: load_hostkeys: fopen /etc/ssh/ssh_known_hosts2: No such file or directory
+2025-11-28T12:18:26.2711811Z debug1: Host '***' is known and matches the ED25519 host key.
+2025-11-28T12:18:26.2712927Z debug1: Found key in /home/runner/.ssh/known_hosts:3
+2025-11-28T12:18:26.2959678Z debug1: ssh_packet_send2_wrapped: resetting send seqnr 3
+2025-11-28T12:18:26.2960457Z debug1: rekey out after 134217728 blocks
+2025-11-28T12:18:26.2961100Z debug1: SSH2_MSG_NEWKEYS sent
+2025-11-28T12:18:26.2962291Z debug1: Sending SSH2_MSG_EXT_INFO
+2025-11-28T12:18:26.2962929Z debug1: expecting SSH2_MSG_NEWKEYS
+2025-11-28T12:18:26.2963651Z debug1: ssh_packet_read_poll2: resetting read seqnr 3
+2025-11-28T12:18:26.2964371Z debug1: SSH2_MSG_NEWKEYS received
+2025-11-28T12:18:26.2965323Z debug1: rekey in after 134217728 blocks
+2025-11-28T12:18:26.2966027Z debug1: SSH2_MSG_EXT_INFO received
+2025-11-28T12:18:26.2968032Z debug1: kex_ext_info_client_parse: server-sig-algs=<ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,rsa-sha2-512,rsa-sha2-256>
+2025-11-28T12:18:26.2970334Z debug1: kex_ext_info_check_ver: publickey-hostbound@openssh.com=<0>
+2025-11-28T12:18:26.2971172Z debug1: kex_ext_info_check_ver: ping@openssh.com=<0>
+2025-11-28T12:18:26.6844283Z debug1: SSH2_MSG_SERVICE_ACCEPT received
+2025-11-28T12:18:26.8610894Z debug1: SSH2_MSG_EXT_INFO received
+2025-11-28T12:18:26.8613281Z debug1: kex_ext_info_client_parse: server-sig-algs=<ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,sk-ssh-ed25519@openssh.com,sk-ecdsa-sha2-nistp256@openssh.com,rsa-sha2-512,rsa-sha2-256>
+2025-11-28T12:18:26.8615647Z debug1: Authentications that can continue: publickey
+2025-11-28T12:18:26.8616693Z debug1: Next authentication method: publickey
+2025-11-28T12:18:26.8617605Z debug1: Will attempt key: /home/runner/.ssh/id_rsa  explicit
+2025-11-28T12:18:26.8618606Z debug1: Trying private key: /home/runner/.ssh/id_rsa
+2025-11-28T12:18:26.8619824Z Load key "/home/runner/.ssh/id_rsa": error in libcrypto
+2025-11-28T12:18:26.8621929Z debug1: No more authentication methods to try.
+2025-11-28T12:18:26.8622974Z ***@***: Permission denied (publickey).
+2025-11-28T12:18:26.8627790Z scp: Connection closed
+2025-11-28T12:18:26.8629734Z ❌ Failed to copy .env.production file
+2025-11-28T12:18:26.8643551Z ##[error]Process completed with exit code 1.
+2025-11-28T12:18:26.8695927Z ##[group]Run rm -f ~/.ssh/id_rsa
+2025-11-28T12:18:26.8696282Z [36;1mrm -f ~/.ssh/id_rsa[0m
+2025-11-28T12:18:26.8728111Z shell: /usr/bin/bash -e {0}
+2025-11-28T12:18:26.8728383Z ##[endgroup]
+2025-11-28T12:18:26.8822970Z ##[group]Run echo "================================================"
+2025-11-28T12:18:26.8823407Z [36;1mecho "================================================"[0m
+2025-11-28T12:18:26.8823758Z [36;1mecho "❌ DEPLOYMENT FAILED!"[0m
+2025-11-28T12:18:26.8824087Z [36;1mecho "================================================"[0m
+2025-11-28T12:18:26.8824410Z [36;1mecho ""[0m
+2025-11-28T12:18:26.8824676Z [36;1mecho "🔍 Debugging Information:"[0m
+2025-11-28T12:18:26.8824985Z [36;1mecho "  - Time: $(date)"[0m
+2025-11-28T12:18:26.8825280Z [36;1mecho "  - Branch: main"[0m
+2025-11-28T12:18:26.8825633Z [36;1mecho "  - Commit: 406d88ceba0d397fd4c4f1355d2b20fced656c80"[0m
+2025-11-28T12:18:26.8826013Z [36;1mecho "  - Actor: GunwooPar"[0m
+2025-11-28T12:18:26.8826481Z [36;1mecho "  - Workflow Run: https://github.com/PHJ2000/Cash-Up/actions/runs/19763604394"[0m
+2025-11-28T12:18:26.8826921Z [36;1mecho ""[0m
+2025-11-28T12:18:26.8827165Z [36;1mecho "📋 Failed Job Steps:"[0m
+2025-11-28T12:18:26.8827569Z [36;1mecho "  Check the logs above to identify which step failed:"[0m
+2025-11-28T12:18:26.8827945Z [36;1mecho "  1. Setup SSH Key"[0m
+2025-11-28T12:18:26.8828261Z [36;1mecho "  2. Copy environment file to server"[0m
+2025-11-28T12:18:26.8828623Z [36;1mecho "  3. Create server env file and deploy"[0m
+2025-11-28T12:18:26.8828961Z [36;1mecho "  4. Verify deployment"[0m
+2025-11-28T12:18:26.8829241Z [36;1mecho ""[0m
+2025-11-28T12:18:26.8829485Z [36;1mecho "💡 Common Issues:"[0m
+2025-11-28T12:18:26.8829893Z [36;1mecho "  - SSH connection problems → Check EC2_HOST, EC2_USER, SSH_KEY secrets"[0m
+2025-11-28T12:18:26.8830427Z [36;1mecho "  - Missing .env.production → Ensure file exists in repository"[0m
+2025-11-28T12:18:26.8830907Z [36;1mecho "  - Git pull failed → Check for merge conflicts on server"[0m
+2025-11-28T12:18:26.8831767Z [36;1mecho "  - Deploy script failed → Check deploy.sh for errors"[0m
+2025-11-28T12:18:26.8832249Z [36;1mecho "  - Health check failed → Check PM2 logs and server status"[0m
+2025-11-28T12:18:26.8832617Z [36;1mecho ""[0m
+2025-11-28T12:18:26.8832870Z [36;1mecho "🔧 Quick Debug Commands:"[0m
+2025-11-28T12:18:26.8833239Z [36;1mecho "  ssh <user>@<host> 'cd /var/www/cash-up && pm2 logs'"[0m
+2025-11-28T12:18:26.8833662Z [36;1mecho "  ssh <user>@<host> 'cd /var/www/cash-up && git status'"[0m
+2025-11-28T12:18:26.8834046Z [36;1mecho "  ssh <user>@<host> 'pm2 status'"[0m
+2025-11-28T12:18:26.8834349Z [36;1mecho ""[0m
+2025-11-28T12:18:26.8834613Z [36;1mecho "================================================"[0m
+2025-11-28T12:18:26.8863596Z shell: /usr/bin/bash -e {0}
+2025-11-28T12:18:26.8863865Z ##[endgroup]
+2025-11-28T12:18:26.8909730Z ================================================
+2025-11-28T12:18:26.8910259Z ❌ DEPLOYMENT FAILED!
+2025-11-28T12:18:26.8910520Z ================================================
+2025-11-28T12:18:26.8910738Z 
+2025-11-28T12:18:26.8910890Z 🔍 Debugging Information:
+2025-11-28T12:18:26.8922736Z   - Time: Fri Nov 28 12:18:26 UTC 2025
+2025-11-28T12:18:26.8923276Z   - Branch: main
+2025-11-28T12:18:26.8923739Z   - Commit: 406d88ceba0d397fd4c4f1355d2b20fced656c80
+2025-11-28T12:18:26.8924267Z   - Actor: GunwooPar
+2025-11-28T12:18:26.8924847Z   - Workflow Run: https://github.com/PHJ2000/Cash-Up/actions/runs/19763604394
+2025-11-28T12:18:26.8925340Z 
+2025-11-28T12:18:26.8925580Z 📋 Failed Job Steps:
+2025-11-28T12:18:26.8926048Z   Check the logs above to identify which step failed:
+2025-11-28T12:18:26.8926475Z   1. Setup SSH Key
+2025-11-28T12:18:26.8926738Z   2. Copy environment file to server
+2025-11-28T12:18:26.8927310Z   3. Create server env file and deploy
+2025-11-28T12:18:26.8927797Z   4. Verify deployment
+2025-11-28T12:18:26.8928092Z 
+2025-11-28T12:18:26.8928317Z 💡 Common Issues:
+2025-11-28T12:18:26.8928897Z   - SSH connection problems → Check EC2_HOST, EC2_USER, SSH_KEY secrets
+2025-11-28T12:18:26.8929428Z   - Missing .env.production → Ensure file exists in repository
+2025-11-28T12:18:26.8930089Z   - Git pull failed → Check for merge conflicts on server
+2025-11-28T12:18:26.8930525Z   - Deploy script failed → Check deploy.sh for errors
+2025-11-28T12:18:26.8930975Z   - Health check failed → Check PM2 logs and server status
+2025-11-28T12:18:26.8931224Z 
+2025-11-28T12:18:26.8931365Z 🔧 Quick Debug Commands:
+2025-11-28T12:18:26.8931835Z   ssh <user>@<host> 'cd /var/www/cash-up && pm2 logs'
+2025-11-28T12:18:26.8932308Z   ssh <user>@<host> 'cd /var/www/cash-up && git status'
+2025-11-28T12:18:26.8932644Z   ssh <user>@<host> 'pm2 status'
+2025-11-28T12:18:26.8932825Z 
+2025-11-28T12:18:26.8932938Z ================================================
+2025-11-28T12:18:26.8997800Z Post job cleanup.
+2025-11-28T12:18:26.9923225Z [command]/usr/bin/git version
+2025-11-28T12:18:26.9959735Z git version 2.51.2
+2025-11-28T12:18:27.0002332Z Temporarily overriding HOME='/home/runner/work/_temp/241045eb-2049-4b8c-802f-03adb6bde730' before making global git config changes
+2025-11-28T12:18:27.0003518Z Adding repository directory to the temporary git global config as a safe directory
+2025-11-28T12:18:27.0007600Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Cash-Up/Cash-Up
+2025-11-28T12:18:27.0042025Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-11-28T12:18:27.0073052Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-11-28T12:18:27.0295846Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-11-28T12:18:27.0315882Z http.https://github.com/.extraheader
+2025-11-28T12:18:27.0328790Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2025-11-28T12:18:27.0360675Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-11-28T12:18:27.0583126Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2025-11-28T12:18:27.0615163Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2025-11-28T12:18:27.0945643Z Cleaning up orphan processes

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { JackpotBanner } from '../components/JackpotBanner';
 import { Layout } from '../components/Layout';
 import { useAppState } from '../state/AppStateContext';
 
@@ -14,6 +15,7 @@ export const MainPage = () => {
   return (
     <Layout title={festival?.name ?? '캐시업'}>
       <div className="space-y-5">
+        <JackpotBanner />
         <Card className="flex items-center justify-between">
           <div>
             <p className="text-sm text-beach-navy/70">{user?.displayName}님, 환영합니다</p>
